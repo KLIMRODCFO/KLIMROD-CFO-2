@@ -6,14 +6,15 @@ import { useUser } from "../UserContext";
 
 export default function BusinessUnitPage() {
   const { user } = useUser();
-  const [units, setUnits] = useState([]);
+  type BU = { business_unit_id: string; business_unit_name: string };
+  const [units, setUnits] = useState<BU[]>([]);
   const [loading, setLoading] = useState(true);
   const { activeBU, setActiveBU } = useActiveBU();
 
   useEffect(() => {
     const fetchUnits = async () => {
       setLoading(true);
-      let assignedUnits = [];
+      let assignedUnits: any[] = [];
       if (user) {
         const cleanUserId = typeof user.id === 'string' ? user.id.split(":")[0] : user.id;
         const { data: userUnits } = await supabase

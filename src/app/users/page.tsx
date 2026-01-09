@@ -10,6 +10,7 @@ const UsersPage: React.FC = () => {
   const [roles, setRoles] = useState([]);
   const [businessUnits, setBusinessUnits] = useState([]);
   const [editing, setEditing] = useState({});
+  const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saveMsg, setSaveMsg] = useState("");
   const [deleteUserId, setDeleteUserId] = useState(null);
@@ -24,19 +25,27 @@ const UsersPage: React.FC = () => {
       const { data: rolesData } = await supabase.from('master_roles').select('id, name');
       // Fetch business units
       const { data: buData } = await supabase.from('master_business_units').select('id, name');
-      // Fetch user roles and business units
+      // Fetch modules
+      const { data: modulesData } = await supabase.from('master_modules').select('id, name');
+      // Fetch user roles, business units, and extra modules
       const { data: userRoles } = await supabase.from('master_user_roles').select('user_id, role_id');
       const { data: userBUs } = await supabase.from('master_user_business_units').select('user_id, business_unit_id');
+      const { data: userModules } = await supabase.from('master_user_modules').select('user_id, module_id');
 
       // Merge data for table
       const usersWithDetails = (usersData || []).map(u => {
-        const role = userRoles?.find(r => r.user_id === u.id)?.role_id || '';
+        // Permitir hasta 4 roles por usuario
+        const userRolesList = userRoles?.filter(r => r.user_id === u.id).map(r => r.role_id) || [];
+        // Rellenar hasta 4 posiciones
+        const rolesArr = [0, 1, 2, 3].map(i => userRolesList[i] || '');
         const buList = userBUs?.filter(bu => bu.user_id === u.id).map(bu => bu.business_unit_id) || [];
-        return { ...u, role, businessUnits: buList };
+        const moduleList = userModules?.filter(m => m.user_id === u.id).map(m => m.module_id) || [];
+        return { ...u, rolesArr, businessUnits: buList, modules: moduleList };
       });
       setUsers(usersWithDetails);
       setRoles(rolesData || []);
       setBusinessUnits(buData || []);
+      setModules(modulesData || []);
       setLoading(false);
     };
     fetchData();
@@ -49,27 +58,44 @@ const UsersPage: React.FC = () => {
   const handleSave = async (user) => {
     const changes = editing[user.id];
     if (!changes) return;
-    // Update role
-    if (changes.role && changes.role !== user.role) {
-      await supabase.from('master_user_roles').update({ role_id: changes.role }).eq('user_id', user.id);
+    // Update roles (hasta 4)
+    if (changes.rolesArr) {
+      // Eliminar todos los roles actuales
+      await supabase.from('master_user_roles').delete().eq('user_id', user.id);
+      // Insertar los nuevos roles (ignorando vacíos)
+      for (const roleId of changes.rolesArr) {
+        if (roleId && roleId !== '') {
+          await supabase.from('master_user_roles').insert({ user_id: user.id, role_id: roleId });
+        }
+      }
     }
     // Update business units
     if (changes.businessUnits) {
-      // Remove all and insert new
       await supabase.from('master_user_business_units').delete().eq('user_id', user.id);
       for (const buId of changes.businessUnits) {
         await supabase.from('master_user_business_units').insert({ user_id: user.id, business_unit_id: buId });
+      }
+    }
+    // Update extra modules
+    if (changes.modules) {
+      await supabase.from('master_user_modules').delete().eq('user_id', user.id);
+      for (const moduleId of changes.modules) {
+        await supabase.from('master_user_modules').insert({ user_id: user.id, module_id: moduleId });
       }
     }
     setEditing(prev => { const cp = { ...prev }; delete cp[user.id]; return cp; });
     // Refresh data
     const { data: userRoles } = await supabase.from('master_user_roles').select('user_id, role_id');
     const { data: userBUs } = await supabase.from('master_user_business_units').select('user_id, business_unit_id');
+    const { data: userModules } = await supabase.from('master_user_modules').select('user_id, module_id');
     setUsers(users.map(u => {
       if (u.id !== user.id) return u;
-      const role = userRoles?.find(r => r.user_id === u.id)?.role_id || '';
+      // Permitir hasta 4 roles por usuario
+      const userRolesList = userRoles?.filter(r => r.user_id === u.id).map(r => r.role_id) || [];
+      const rolesArr = [0, 1, 2, 3].map(i => userRolesList[i] || '');
       const buList = userBUs?.filter(bu => bu.user_id === u.id).map(bu => bu.business_unit_id) || [];
-      return { ...u, role, businessUnits: buList };
+      const moduleList = userModules?.filter(m => m.user_id === u.id).map(m => m.module_id) || [];
+      return { ...u, rolesArr, businessUnits: buList, modules: moduleList };
     }));
     setSaveMsg("Save Successfully");
     setTimeout(() => setSaveMsg(""), 2000);
@@ -107,8 +133,7 @@ const UsersPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="py-2 px-4 border-b">Email</th>
-                  <th className="py-2 px-4 border-b">Role</th>
-                  <th className="py-2 px-4 border-b">Role Management</th>
+                  <th className="py-2 px-4 border-b">Primary Role</th>
                   <th className="py-2 px-4 border-b">Business Units</th>
                   <th className="py-2 px-4 border-b">Actions</th>
                 </tr>
@@ -120,22 +145,15 @@ const UsersPage: React.FC = () => {
                     <td className="py-2 px-4 border-b">
                       <select
                         className="border rounded px-2 py-1"
-                        value={editing[user.id]?.role ?? user.role}
-                        onChange={e => handleEdit(user.id, 'role', e.target.value)}
+                        value={editing[user.id]?.rolesArr?.[0] ?? user.rolesArr[0]}
+                        onChange={e => {
+                          const prev = editing[user.id]?.rolesArr ?? user.rolesArr;
+                          const next = [...prev];
+                          next[0] = e.target.value;
+                          handleEdit(user.id, 'rolesArr', next);
+                        }}
                       >
-                        <option value="">Select...</option>
-                        {roles.map(r => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-2 px-4 border-b">
-                      <select
-                        className="border rounded px-2 py-1"
-                        value={editing[user.id]?.role ?? user.role}
-                        onChange={e => handleEdit(user.id, 'role', e.target.value)}
-                      >
-                        <option value="">Select...</option>
+                        <option value="">Select role</option>
                         {roles.map(r => (
                           <option key={r.id} value={r.id}>{r.name}</option>
                         ))}
@@ -175,11 +193,13 @@ const UsersPage: React.FC = () => {
                         onClick={() => setEditing(prev => { const cp = { ...prev }; delete cp[user.id]; return cp; })}
                         disabled={!editing[user.id]}
                       >Cancel</button>
-                      <button
-                        className="bg-red-500 text-white px-4 py-1 rounded"
-                        onClick={() => setDeleteUserId(user.id)}
-                        disabled={deleting}
-                      >Delete</button>
+                      {user.email.toLowerCase() !== "juan@klimrodcfo.com" && (
+                        <button
+                          className="bg-red-500 text-white px-4 py-1 rounded"
+                          onClick={() => setDeleteUserId(user.id)}
+                          disabled={deleting}
+                        >Delete</button>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -107,7 +107,15 @@ const Sidebar = () => {
                 <Link href="/chef-management" className="block px-4 py-2 hover:bg-gray-800 cursor-pointer">CHEF MANAGEMENT</Link>
               </li>
             )}
-            {allowedModules.includes('FINANCIAL INTELLIGENCE') && (
+            {[
+              'FINANCIAL INTELLIGENCE',
+              'REVENUE MANAGEMENT',
+              'VENDORS',
+              'INVOICE ALLOCATION',
+              'INVOICE DIRECTORY',
+              'FINANCIAL REPORTS',
+              'TAX',
+            ].some(mod => allowedModules.includes(mod)) && (
               <li>
                 <button type="button" className="w-full text-left px-4 py-2 hover:bg-gray-800 flex justify-between items-center" onClick={() => toggleMenu('FINANCIAL INTELLIGENCE')}>
                   FINANCIAL INTELLIGENCE
@@ -115,12 +123,12 @@ const Sidebar = () => {
                 </button>
                 {openMenus['FINANCIAL INTELLIGENCE'] && (
                   <ul className="ml-4 space-y-1 text-sm">
-                    <li><Link href="/financial-intelligence/revenue-management" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">REVENUE MANAGEMENT</Link></li>
-                    <li><Link href="/financial-intelligence/vendors" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">VENDORS</Link></li>
-                    <li><Link href="/financial-intelligence/invoice-allocation" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">INVOICE ALLOCATION</Link></li>
-                    <li><Link href="/financial-intelligence/invoice-directory" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">INVOICE DIRECTORY</Link></li>
-                    <li><Link href="/financial-intelligence/financial-reports" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">FINANCIAL REPORTS</Link></li>
-                    <li><Link href="/financial-intelligence/tax" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">TAX</Link></li>
+                    {allowedModules.includes('REVENUE MANAGEMENT') && <li><Link href="/financial-intelligence/revenue-management" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">REVENUE MANAGEMENT</Link></li>}
+                    {allowedModules.includes('VENDORS') && <li><Link href="/financial-intelligence/vendors" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">VENDORS</Link></li>}
+                    {allowedModules.includes('INVOICE ALLOCATION') && <li><Link href="/financial-intelligence/invoice-allocation" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">INVOICE ALLOCATION</Link></li>}
+                    {allowedModules.includes('INVOICE DIRECTORY') && <li><Link href="/financial-intelligence/invoice-directory" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">INVOICE DIRECTORY</Link></li>}
+                    {allowedModules.includes('FINANCIAL REPORTS') && <li><Link href="/financial-intelligence/financial-reports" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">FINANCIAL REPORTS</Link></li>}
+                    {allowedModules.includes('TAX') && <li><Link href="/financial-intelligence/tax" className="px-2 py-1 hover:bg-gray-700 cursor-pointer block">TAX</Link></li>}
                   </ul>
                 )}
               </li>

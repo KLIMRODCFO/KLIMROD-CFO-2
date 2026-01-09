@@ -1,28 +1,22 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
-const roles = [
-  'HR',
-  'MANAGER',
-  'CHEF',
-  'SOMMELIER',
-  'ADMINISTRATION',
-  'ACCOUNTING',
-  'DEVELOPER',
-  'OWNER',
-  'INVESTOR',
-  'SUPER ADMIN',
-];
-
-const businessUnits = [
-  'TUCCI',
-  "DELMONICO'S",
-  'SEI LESS',
-  'HARBOR NYC',
-];
-
 const CreateUser: React.FC = () => {
+  const [roles, setRoles] = useState<{ id: string, name: string }[]>([]);
+  const [businessUnits, setBusinessUnits] = useState<{ id: string, name: string }[]>([]);
+  useEffect(() => {
+    const fetchRoles = async () => {
+      const { data, error } = await supabase.from('master_roles').select('id, name');
+      if (!error && data) setRoles(data);
+    };
+    const fetchBusinessUnits = async () => {
+      const { data, error } = await supabase.from('master_business_units').select('id, name');
+      if (!error && data) setBusinessUnits(data);
+    };
+    fetchRoles();
+    fetchBusinessUnits();
+  }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -169,30 +163,31 @@ const CreateUser: React.FC = () => {
           required
         />
         <div className="mb-4">
-          <label className="block font-semibold mb-2">Roles:</label>
-          {roles.map(r => (
-            <label key={r} className="block">
-              <input
-                type="checkbox"
-                checked={selectedRoles.includes(r)}
-                onChange={() => handleRoleChange(r)}
-                className="mr-2"
-              />
-              {r}
-            </label>
-          ))}
+          <label className="block font-semibold mb-2">Role:</label>
+          <select
+            className="w-full border rounded p-2"
+            value={selectedRoles[0] || ''}
+            onChange={e => setSelectedRoles(e.target.value ? [e.target.value] : [])}
+            required
+          >
+            <option value="">Selecciona un rol</option>
+            {roles.map(role => (
+              <option key={role.id} value={role.name}>{role.name}</option>
+            ))}
+          </select>
         </div>
         <div className="mb-4">
           <label className="block font-semibold mb-2">Business Units:</label>
+          {businessUnits.length === 0 && <div className="text-gray-500">No hay unidades disponibles.</div>}
           {businessUnits.map(bu => (
-            <label key={bu} className="block">
+            <label key={bu.id} className="block">
               <input
                 type="checkbox"
-                checked={selectedUnits.includes(bu)}
-                onChange={() => handleUnitChange(bu)}
+                checked={selectedUnits.includes(bu.name)}
+                onChange={() => handleUnitChange(bu.name)}
                 className="mr-2"
               />
-              {bu}
+              {bu.name}
             </label>
           ))}
         </div>
