@@ -1,0 +1,215 @@
+"use client";
+"use client";
+import React, { useEffect, useState } from 'react';
+import CreateUser from '../CreateUser';
+import { supabase } from '../../../lib/supabaseClient';
+
+
+const UsersPage: React.FC = () => {
+  const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [businessUnits, setBusinessUnits] = useState([]);
+  const [editing, setEditing] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saveMsg, setSaveMsg] = useState("");
+  const [deleteUserId, setDeleteUserId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      // Fetch users
+      const { data: usersData } = await supabase.from('master_users').select('id, email');
+      // Fetch roles
+      const { data: rolesData } = await supabase.from('master_roles').select('id, name');
+      // Fetch business units
+      const { data: buData } = await supabase.from('master_business_units').select('id, name');
+      // Fetch user roles and business units
+      const { data: userRoles } = await supabase.from('master_user_roles').select('user_id, role_id');
+      const { data: userBUs } = await supabase.from('master_user_business_units').select('user_id, business_unit_id');
+
+      // Merge data for table
+      const usersWithDetails = (usersData || []).map(u => {
+        const role = userRoles?.find(r => r.user_id === u.id)?.role_id || '';
+        const buList = userBUs?.filter(bu => bu.user_id === u.id).map(bu => bu.business_unit_id) || [];
+        return { ...u, role, businessUnits: buList };
+      });
+      setUsers(usersWithDetails);
+      setRoles(rolesData || []);
+      setBusinessUnits(buData || []);
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  const handleEdit = (userId, field, value) => {
+    setEditing(prev => ({ ...prev, [userId]: { ...prev[userId], [field]: value } }));
+  };
+
+  const handleSave = async (user) => {
+    const changes = editing[user.id];
+    if (!changes) return;
+    // Update role
+    if (changes.role && changes.role !== user.role) {
+      await supabase.from('master_user_roles').update({ role_id: changes.role }).eq('user_id', user.id);
+    }
+    // Update business units
+    if (changes.businessUnits) {
+      // Remove all and insert new
+      await supabase.from('master_user_business_units').delete().eq('user_id', user.id);
+      for (const buId of changes.businessUnits) {
+        await supabase.from('master_user_business_units').insert({ user_id: user.id, business_unit_id: buId });
+      }
+    }
+    setEditing(prev => { const cp = { ...prev }; delete cp[user.id]; return cp; });
+    // Refresh data
+    const { data: userRoles } = await supabase.from('master_user_roles').select('user_id, role_id');
+    const { data: userBUs } = await supabase.from('master_user_business_units').select('user_id, business_unit_id');
+    setUsers(users.map(u => {
+      if (u.id !== user.id) return u;
+      const role = userRoles?.find(r => r.user_id === u.id)?.role_id || '';
+      const buList = userBUs?.filter(bu => bu.user_id === u.id).map(bu => bu.business_unit_id) || [];
+      return { ...u, role, businessUnits: buList };
+    }));
+    setSaveMsg("Save Successfully");
+    setTimeout(() => setSaveMsg(""), 2000);
+  };
+
+  const handleDelete = async (userId) => {
+    setDeleting(true);
+    // Delete from Supabase Auth
+    await fetch('/api/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
+    });
+    // Delete from user tables
+    await supabase.from('master_user_roles').delete().eq('user_id', userId);
+    await supabase.from('master_user_business_units').delete().eq('user_id', userId);
+    await supabase.from('master_users').delete().eq('id', userId);
+    setUsers(users.filter(u => u.id !== userId));
+    setDeleting(false);
+    setDeleteUserId(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <h1 className="text-3xl font-bold mb-6">User Management</h1>
+      <CreateUser />
+      <div className="mt-10">
+        <h2 className="text-xl font-semibold mb-4">Edit Users</h2>
+        {saveMsg && <div className="mb-4 text-green-600 font-bold">{saveMsg}</div>}
+        {loading ? (
+          <div>Loading...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border rounded shadow">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border-b">Email</th>
+                  <th className="py-2 px-4 border-b">Role</th>
+                  <th className="py-2 px-4 border-b">Role Management</th>
+                  <th className="py-2 px-4 border-b">Business Units</th>
+                  <th className="py-2 px-4 border-b">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(user => (
+                  <tr key={user.id}>
+                    <td className="py-2 px-4 border-b">{user.email}</td>
+                    <td className="py-2 px-4 border-b">
+                      <select
+                        className="border rounded px-2 py-1"
+                        value={editing[user.id]?.role ?? user.role}
+                        onChange={e => handleEdit(user.id, 'role', e.target.value)}
+                      >
+                        <option value="">Select...</option>
+                        {roles.map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="py-2 px-4 border-b">
+                      <select
+                        className="border rounded px-2 py-1"
+                        value={editing[user.id]?.role ?? user.role}
+                        onChange={e => handleEdit(user.id, 'role', e.target.value)}
+                      >
+                        <option value="">Select...</option>
+                        {roles.map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="py-2 px-4 border-b">
+                      <div className="flex flex-wrap gap-2">
+                        {businessUnits.map(bu => (
+                          <label key={bu.id} className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={(editing[user.id]?.businessUnits ?? user.businessUnits).includes(bu.id)}
+                              onChange={e => {
+                                const prev = editing[user.id]?.businessUnits ?? user.businessUnits;
+                                let next;
+                                if (e.target.checked) {
+                                  next = [...prev, bu.id];
+                                } else {
+                                  next = prev.filter(id => id !== bu.id);
+                                }
+                                handleEdit(user.id, 'businessUnits', next);
+                              }}
+                            />
+                            <span>{bu.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-2 px-4 border-b">
+                      <button
+                        className="bg-blue-500 text-white px-4 py-1 rounded mr-2"
+                        onClick={() => handleSave(user)}
+                        disabled={!editing[user.id]}
+                      >Save</button>
+                      <button
+                        className="bg-gray-300 text-gray-700 px-4 py-1 rounded mr-2"
+                        onClick={() => setEditing(prev => { const cp = { ...prev }; delete cp[user.id]; return cp; })}
+                        disabled={!editing[user.id]}
+                      >Cancel</button>
+                      <button
+                        className="bg-red-500 text-white px-4 py-1 rounded"
+                        onClick={() => setDeleteUserId(user.id)}
+                        disabled={deleting}
+                      >Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* Delete confirmation modal */}
+            {deleteUserId && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+                <div className="bg-white p-8 rounded shadow-lg max-w-sm w-full">
+                  <h3 className="text-lg font-bold mb-4">Are you sure you want to delete this user?</h3>
+                  <div className="flex justify-end gap-4">
+                    <button
+                      className="bg-gray-300 text-gray-700 px-4 py-1 rounded"
+                      onClick={() => setDeleteUserId(null)}
+                      disabled={deleting}
+                    >Cancel</button>
+                    <button
+                      className="bg-red-500 text-white px-4 py-1 rounded"
+                      onClick={() => handleDelete(deleteUserId)}
+                      disabled={deleting}
+                    >Delete</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default UsersPage;

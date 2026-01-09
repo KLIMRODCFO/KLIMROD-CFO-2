@@ -24,6 +24,16 @@
 .DS_Store
 *.pem
 
+# supabase local config
+.supabase/
+
+# sqlite/db
+*.sqlite
+*.db
+
+# VSCode
+.vscode/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
