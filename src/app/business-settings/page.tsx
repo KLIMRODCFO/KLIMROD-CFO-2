@@ -152,8 +152,8 @@ export default function BusinessUnitsDirectory() {
                           await supabase
                             .from("master_business_units")
                             .update({
-                              name: bu.editName.toUpperCase(),
-                              city: bu.editCity.toUpperCase()
+                              name: (bu.editName ?? '').toUpperCase(),
+                              city: (bu.editCity ?? '').toUpperCase()
                             })
                             .eq("id", bu.id);
                           setBusinessUnits(units => units.map(unit => unit.id === bu.id ? { ...unit, editing: false } : unit));
