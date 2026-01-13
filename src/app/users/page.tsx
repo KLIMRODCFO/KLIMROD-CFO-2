@@ -59,7 +59,7 @@ const UsersPage: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleEdit = (userId, field, value) => {
+  const handleEdit = (userId: string, field: string, value: any) => {
     setEditing(prev => ({ ...prev, [userId]: { ...prev[userId], [field]: value } }));
   };
 
