@@ -63,7 +63,7 @@ const UsersPage: React.FC = () => {
     setEditing(prev => ({ ...prev, [userId]: { ...prev[userId], [field]: value } }));
   };
 
-  const handleSave = async (user) => {
+  const handleSave = async (user: UserWithDetails) => {
     const changes = editing[user.id];
     if (!changes) return;
     // Update roles (hasta 4)
