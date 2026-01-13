@@ -109,7 +109,7 @@ const UsersPage: React.FC = () => {
     setTimeout(() => setSaveMsg(""), 2000);
   };
 
-  const handleDelete = async (userId) => {
+  const handleDelete = async (userId: string) => {
     setDeleting(true);
     // Delete from Supabase Auth
     await fetch('/api/delete-user', {
@@ -180,7 +180,7 @@ const UsersPage: React.FC = () => {
                                 if (e.target.checked) {
                                   next = [...prev, bu.id];
                                 } else {
-                                  next = prev.filter(id => id !== bu.id);
+                                  next = prev.filter((id: string) => id !== bu.id);
                                 }
                                 handleEdit(user.id, 'businessUnits', next);
                               }}
