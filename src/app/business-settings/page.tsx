@@ -177,7 +177,7 @@ export default function BusinessUnitsDirectory() {
                       >
                         EDIT
                       </button>
-                      {bu.active === false || bu.active === 'false' ? (
+                      {bu.active === false ? (
                         <button
                           className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs"
                           onClick={async () => {
