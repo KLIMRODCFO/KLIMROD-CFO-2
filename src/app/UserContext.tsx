@@ -65,12 +65,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('module_id, master_modules(name)')
           .eq('role_id', mainRoleId)
           .eq('access', true);
+
+        // Tipar correctamente los datos recibidos
+        type UserRoleData = { role_id: string; master_roles: { name: string } };
+        type UserBusinessUnitData = { business_unit_id: string; master_business_units: { name: string } };
+        type AllowedModuleData = { module_id: string; master_modules: { name: string } };
+
+        const userRoleArr = (userRoles ?? []) as UserRoleData[];
+        const userBusinessUnitArr = (userBusinessUnits ?? []) as UserBusinessUnitData[];
+        const allowedModulesArr = (allowedModules ?? []) as AllowedModuleData[];
+
         setUser({
           id: userId,
           email: authData.user.email ?? '',
-          role: userRoles?.[0]?.master_roles?.name || 'USER',
-          businessUnits: userBusinessUnits?.map(bu => bu.master_business_units.name) || [],
-          permissions: allowedModules?.map(m => m.master_modules.name) || [],
+          role: userRoleArr[0]?.master_roles?.name || 'USER',
+          businessUnits: userBusinessUnitArr.map(bu => bu.master_business_units.name) || [],
+          permissions: allowedModulesArr.map(m => m.master_modules.name) || [],
         });
       } else {
         setUser(null);
