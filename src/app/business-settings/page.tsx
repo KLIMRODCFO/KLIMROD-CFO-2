@@ -208,7 +208,7 @@ export default function BusinessUnitsDirectory() {
                   )}
                 </td>
                 <td className="px-4 py-2">
-                  {bu.active === true || bu.active === 'true' ? (
+                  {bu.active === true ? (
                     <span className="text-green-600 font-semibold">ACTIVE</span>
                   ) : (
                     <span className="text-gray-400">INACTIVE</span>
