@@ -95,11 +95,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'SUPER ADMIN',
         ];
         const safeRole = validRoles.includes(roleName as UserRole) ? (roleName as UserRole) : 'USER';
+        // Validar que los businessUnits sean del tipo BusinessUnit
+        const validBusinessUnits: BusinessUnit[] = [
+          'TUCCI',
+          "DELMONICO'S",
+          'SEI LESS',
+          'HARBOR NYC',
+        ];
+        const businessUnits = userBusinessUnitArr
+          .map(bu => getName(bu.master_business_units))
+          .filter((name): name is BusinessUnit => validBusinessUnits.includes(name as BusinessUnit));
+
         setUser({
           id: userId,
           email: authData.user.email ?? '',
           role: safeRole,
-          businessUnits: userBusinessUnitArr.map(bu => getName(bu.master_business_units)).filter(Boolean) || [],
+          businessUnits,
           permissions: allowedModulesArr.map(m => getName(m.master_modules)).filter(Boolean) || [],
         });
       } else {
