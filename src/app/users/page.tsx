@@ -5,8 +5,16 @@ import CreateUser from '../CreateUser';
 import { supabase } from '../../../lib/supabaseClient';
 
 
+interface UserWithDetails {
+  id: any;
+  email: any;
+  rolesArr: any[];
+  businessUnits: any[];
+  modules: any[];
+}
+
 const UsersPage: React.FC = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<UserWithDetails[]>([]);
   const [roles, setRoles] = useState([]);
   const [businessUnits, setBusinessUnits] = useState([]);
   const [editing, setEditing] = useState({});
