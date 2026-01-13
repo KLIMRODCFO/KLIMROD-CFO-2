@@ -7,6 +7,9 @@ interface BusinessUnit {
   name: string;
   city: string;
   active: boolean;
+  editing?: boolean;
+  editName?: string;
+  editCity?: string;
 }
 
 export default function BusinessUnitsDirectory() {
