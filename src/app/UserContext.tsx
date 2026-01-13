@@ -67,20 +67,24 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('access', true);
 
         // Tipar correctamente los datos recibidos
-        type UserRoleData = { role_id: string; master_roles: { name: string } };
-        type UserBusinessUnitData = { business_unit_id: string; master_business_units: { name: string } };
-        type AllowedModuleData = { module_id: string; master_modules: { name: string } };
+        // Ajustar para el caso en que master_roles y master_business_units pueden ser arreglos
+        type UserRoleData = { role_id: string; master_roles: { name: string } | { name: string }[] };
+        type UserBusinessUnitData = { business_unit_id: string; master_business_units: { name: string } | { name: string }[] };
+        type AllowedModuleData = { module_id: string; master_modules: { name: string } | { name: string }[] };
 
         const userRoleArr = (userRoles ?? []) as UserRoleData[];
         const userBusinessUnitArr = (userBusinessUnits ?? []) as UserBusinessUnitData[];
         const allowedModulesArr = (allowedModules ?? []) as AllowedModuleData[];
 
+        // Helper para extraer el nombre correctamente
+        const getName = (obj: { name: string } | { name: string }[]) => Array.isArray(obj) ? obj[0]?.name : obj?.name;
+
         setUser({
           id: userId,
           email: authData.user.email ?? '',
-          role: userRoleArr[0]?.master_roles?.name || 'USER',
-          businessUnits: userBusinessUnitArr.map(bu => bu.master_business_units.name) || [],
-          permissions: allowedModulesArr.map(m => m.master_modules.name) || [],
+          role: getName(userRoleArr[0]?.master_roles) || 'USER',
+          businessUnits: userBusinessUnitArr.map(bu => getName(bu.master_business_units)).filter(Boolean) || [],
+          permissions: allowedModulesArr.map(m => getName(m.master_modules)).filter(Boolean) || [],
         });
       } else {
         setUser(null);
