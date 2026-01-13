@@ -15,10 +15,10 @@ interface UserWithDetails {
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserWithDetails[]>([]);
-  const [roles, setRoles] = useState([]);
-  const [businessUnits, setBusinessUnits] = useState([]);
-  const [editing, setEditing] = useState({});
-  const [modules, setModules] = useState([]);
+  const [roles, setRoles] = useState<{ id: any; name: any }[]>([]);
+  const [businessUnits, setBusinessUnits] = useState<{ id: any; name: any }[]>([]);
+  const [editing, setEditing] = useState<Record<string, any>>({});
+  const [modules, setModules] = useState<{ id: any; name: any }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveMsg, setSaveMsg] = useState("");
   const [deleteUserId, setDeleteUserId] = useState(null);
