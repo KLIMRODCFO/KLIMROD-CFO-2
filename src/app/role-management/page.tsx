@@ -104,7 +104,7 @@ export default function RoleManagementPage() {
     // Insertar módulos asignados
     if (newRoleModules.length > 0) {
       const permsArr = newRoleModules.map(moduleId => ({ role_id: newRoleId, module_id: moduleId, access: true, assigned_at: new Date().toISOString() }));
-      const { error: modError } = await supabase.from("master_role_modules").upsert(permsArr, { onConflict: ["role_id", "module_id"] });
+      const { error: modError } = await supabase.from("master_role_modules").upsert(permsArr, { onConflict: "role_id,module_id" });
       if (modError) {
         setAddRoleError(modError.message);
         setAddingRole(false);
