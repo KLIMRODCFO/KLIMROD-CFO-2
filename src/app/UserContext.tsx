@@ -67,7 +67,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('access', true);
         setUser({
           id: userId,
-          email: authData.user.email,
+          email: authData.user.email ?? '',
           role: userRoles?.[0]?.master_roles?.name || 'USER',
           businessUnits: userBusinessUnits?.map(bu => bu.master_business_units.name) || [],
           permissions: allowedModules?.map(m => m.master_modules.name) || [],
