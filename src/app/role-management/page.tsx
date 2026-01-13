@@ -77,7 +77,7 @@ export default function RoleManagementPage() {
     });
     const { error } = await supabase
       .from("master_role_modules")
-      .upsert(permsArr, { onConflict: ["role_id", "module_id"] });
+      .upsert(permsArr, { onConflict: "role_id,module_id" });
     if (error) {
       setError(error.message || "Error saving changes");
       setSaved(false);
