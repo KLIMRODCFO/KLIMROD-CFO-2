@@ -14,7 +14,8 @@ export type UserRole =
   | 'DEVELOPER'
   | 'OWNER'
   | 'INVESTOR'
-  | 'SUPER ADMIN';
+  | 'SUPER ADMIN'
+  | 'USER';
 
 export type BusinessUnit =
   | 'TUCCI'
