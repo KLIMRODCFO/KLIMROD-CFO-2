@@ -79,10 +79,25 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Helper para extraer el nombre correctamente
         const getName = (obj: { name: string } | { name: string }[]) => Array.isArray(obj) ? obj[0]?.name : obj?.name;
 
+        // Validar que el role sea un UserRole válido
+        const roleName = getName(userRoleArr[0]?.master_roles) || 'USER';
+        const validRoles: UserRole[] = [
+          'HR',
+          'MANAGER',
+          'CHEF',
+          'SOMMELIER',
+          'ADMINISTRATION',
+          'ACCOUNTING',
+          'DEVELOPER',
+          'OWNER',
+          'INVESTOR',
+          'SUPER ADMIN',
+        ];
+        const safeRole = validRoles.includes(roleName as UserRole) ? (roleName as UserRole) : 'USER';
         setUser({
           id: userId,
           email: authData.user.email ?? '',
-          role: getName(userRoleArr[0]?.master_roles) || 'USER',
+          role: safeRole,
           businessUnits: userBusinessUnitArr.map(bu => getName(bu.master_business_units)).filter(Boolean) || [],
           permissions: allowedModulesArr.map(m => getName(m.master_modules)).filter(Boolean) || [],
         });
