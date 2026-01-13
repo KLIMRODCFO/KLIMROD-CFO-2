@@ -2,15 +2,21 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
-import { UserProvider, useUser } from './UserContext';
-import { ActiveBUProvider } from './ActiveBUContext';
 import { supabase } from '../../lib/supabaseClient';
+import { useUser } from './UserContext';
+import { useActiveBU } from './ActiveBUContext';
 
 const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Componente para mostrar el usuario y logout en el header
-  // Menú de usuario con dropdown y logout
+  const { user, setUser } = useUser();
+  const { activeBU, setActiveBU } = useActiveBU();
+  React.useEffect(() => {
+    if (!activeBU && user && user.businessUnits && user.businessUnits.length > 0) {
+      setActiveBU(user.businessUnits[0]);
+    }
+  }, [activeBU, user, setActiveBU]);
+
+  // HeaderUser debe estar aquí dentro para acceder a user y setUser
   const HeaderUser = () => {
-    const { user, setUser } = useUser();
     const [open, setOpen] = React.useState(false);
     const router = useRouter();
     const handleLogout = async () => {
@@ -46,27 +52,23 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   return (
-    <UserProvider>
-      <ActiveBUProvider>
-        <div className="min-h-screen bg-gray-100">
-          <header className="w-full flex items-center shadow bg-black" style={{ height: '64px' }}>
-            <div className="bg-gray-800 text-white font-bold text-lg rounded-r flex items-center justify-center" style={{ width: '16rem', minWidth: '16rem', height: '64px' }}>MENU</div>
-            <div className="flex-1 flex items-center justify-center h-full">
-              <div className="text-2xl font-bold text-center text-white">KLIMROD CFO</div>
-            </div>
-            <div className="flex items-center h-full pr-8">
-              <HeaderUser />
-            </div>
-          </header>
-          <div className="flex">
-            <Sidebar />
-            <main className="flex-1 p-8">
-              {children}
-            </main>
-          </div>
+    <div className="min-h-screen bg-gray-100">
+      <header className="w-full flex items-center shadow bg-black" style={{ height: '64px' }}>
+        <div className="bg-gray-800 text-white font-bold text-lg rounded-r flex items-center justify-center" style={{ width: '16rem', minWidth: '16rem', height: '64px' }}>MENU</div>
+        <div className="flex-1 flex items-center justify-center h-full">
+          <div className="text-2xl font-bold text-center text-white">KLIMROD CFO</div>
         </div>
-      </ActiveBUProvider>
-    </UserProvider>
+        <div className="flex items-center h-full pr-8">
+          <HeaderUser />
+        </div>
+      </header>
+      <div className="flex">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          {children}
+        </main>
+      </div>
+    </div>
   );
 };
 

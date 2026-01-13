@@ -19,9 +19,10 @@ export default function BusinessUnitPage() {
         const cleanUserId = typeof user.id === 'string' ? user.id.split(":")[0] : user.id;
         const { data: userUnits } = await supabase
           .from("user_business_unit_view")
-          .select("business_unit_id, business_unit_name")
+          .select("*")
           .eq("user_id", cleanUserId);
-        assignedUnits = userUnits || [];
+        console.log('userUnits:', userUnits);
+        assignedUnits = (userUnits || []).filter(u => u.active === true || u.active === 'true');
       }
       setUnits(assignedUnits);
       setLoading(false);

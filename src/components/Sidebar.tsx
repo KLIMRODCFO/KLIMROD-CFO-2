@@ -156,16 +156,7 @@ const Sidebar = () => {
           </ul>
         </nav>
       </div>
-      <button
-        onClick={async () => {
-          await supabase.auth.signOut();
-          window.location.href = '/login';
-        }}
-        className="w-11/12 mx-auto mt-0 py-2 border-2 border-red-400 text-red-400 bg-transparent rounded-lg font-semibold shadow transition-all duration-200 hover:border-red-500 hover:text-red-500"
-        style={{ position: 'relative', top: '-96px', display: 'block', background: 'transparent' }}
-      >
-        Sign Out
-      </button>
+      {/* Sign Out button removed as requested */}
     </aside>
   );
 };

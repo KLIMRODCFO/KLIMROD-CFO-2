@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "./AppShell";
+import { UserProvider } from "./UserContext";
+import { ActiveBUProvider } from "./ActiveBUContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,12 +25,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  console.log("[RootLayout] Rendered");
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AppShell>{children}</AppShell>
+        <UserProvider>
+          <ActiveBUProvider>
+            <AppShell>{children}</AppShell>
+          </ActiveBUProvider>
+        </UserProvider>
       </body>
     </html>
   );
