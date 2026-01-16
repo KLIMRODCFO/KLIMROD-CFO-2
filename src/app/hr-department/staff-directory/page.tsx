@@ -46,7 +46,7 @@ export default function StaffDirectoryPage() {
       setLoading(true);
       let query = supabase
         .from("master_employees_directory")
-        .select("*, department:master_departments(name), position:master_positions(name)");
+        .select("*, department:master_departments(name), position:master_positions(name), pay_type:pay_types(name)");
       if (showActive) query = query.eq("is_active", true);
       if (activeBU) query = query.eq("business_unit_id", activeBU);
       const { data, error } = await query;

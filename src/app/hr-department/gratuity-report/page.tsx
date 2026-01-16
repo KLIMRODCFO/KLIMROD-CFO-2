@@ -11,9 +11,13 @@ const GratuityReportPage: React.FC = () => {
     week: "",
     employee: "",
     event: "",
+    position: "",
+    from: "",
+    to: "",
   });
   const [weeks, setWeeks] = useState<string[]>([]);
-  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; name: string; position?: string }[]>([]);
+  const [positions, setPositions] = useState<string[]>([]);
   const [events, setEvents] = useState<{ id: string; name: string }[]>([]);
   const [detalleData, setDetalleData] = useState<any[]>([]);
   const [totalesData, setTotalesData] = useState<any[]>([]);
@@ -31,14 +35,20 @@ const GratuityReportPage: React.FC = () => {
         data?.forEach((row: any) => row.week_code && set.add(row.week_code));
         setWeeks(Array.from(set).sort());
       });
-    // EMPLOYEE: solo FOH de la unidad de negocio activa
+    // EMPLOYEE y POSITION: solo FOH de la unidad de negocio activa
     supabase
       .from("master_employees_directory")
-      .select("id, name")
+      .select("id, name, position")
       .eq("business_unit_id", activeBU)
       .eq("is_active", true)
       .eq("is_foh", true)
-      .then(({ data }) => setEmployees(data || []));
+      .then(({ data }) => {
+        setEmployees(data || []);
+        // Extraer posiciones únicas
+        const posSet = new Set<string>();
+        data?.forEach((emp: any) => emp.position && posSet.add(emp.position));
+        setPositions(Array.from(posSet).sort());
+      });
     // EVENT: lista de master_event
     supabase
       .from("master_event")
@@ -51,11 +61,14 @@ const GratuityReportPage: React.FC = () => {
     if (!activeBU) return;
     let query = supabase
       .from("closeout_report_employees")
-      .select("id, week_code, date, event_name, employee_name, gratuity, employee_id, event_id")
+      .select("id, week_code, date, event_name, employee_name, gratuity, employee_id, event_id, position")
       .eq("business_unit_id", activeBU);
     if (filters.week) query = query.eq("week_code", filters.week);
     if (filters.employee) query = query.eq("employee_id", filters.employee);
     if (filters.event) query = query.eq("event_id", filters.event);
+    if (filters.position) query = query.eq("position", filters.position);
+    if (filters.from) query = query.gte("date", filters.from);
+    if (filters.to) query = query.lte("date", filters.to);
     query.then(({ data }) => {
       setDetalleData(data || []);
       // Calcular totales por empleado para la vista "totales"
@@ -96,7 +109,7 @@ const GratuityReportPage: React.FC = () => {
         </select>
       </div>
       {/* Filtros */}
-      <div className="bg-white rounded-xl shadow-card p-6 mb-8 w-full max-w-5xl mx-auto grid grid-cols-3 gap-4 items-center">
+      <div className="bg-white rounded-xl shadow-card p-6 mb-8 w-full max-w-6xl mx-auto grid grid-cols-5 gap-4 items-center">
         <div className="flex flex-col items-center">
           <label className="text-xs font-semibold mb-2 uppercase tracking-wide text-gray-700">WEEK</label>
           <select
@@ -124,17 +137,35 @@ const GratuityReportPage: React.FC = () => {
           </select>
         </div>
         <div className="flex flex-col items-center">
-          <label className="text-xs font-semibold mb-2 uppercase tracking-wide text-gray-700">EVENT</label>
+          <label className="text-xs font-semibold mb-2 uppercase tracking-wide text-gray-700">POSITION</label>
           <select
-            value={filters.event}
-            onChange={e => setFilters(f => ({ ...f, event: e.target.value }))}
+            value={filters.position}
+            onChange={e => setFilters(f => ({ ...f, position: e.target.value }))}
             className="bg-gray-50 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary w-full text-center font-medium"
           >
-            <option value="">EVENT</option>
-            {events.map(ev => (
-              <option key={ev.id} value={ev.id}>{ev.name}</option>
+            <option value="">POSITION</option>
+            {positions.map(pos => (
+              <option key={pos} value={pos}>{pos}</option>
             ))}
           </select>
+        </div>
+        <div className="flex flex-col items-center">
+          <label className="text-xs font-semibold mb-2 uppercase tracking-wide text-gray-700">FROM</label>
+          <input
+            type="date"
+            value={filters.from}
+            onChange={e => setFilters(f => ({ ...f, from: e.target.value }))}
+            className="bg-gray-50 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary w-full text-center font-medium"
+          />
+        </div>
+        <div className="flex flex-col items-center">
+          <label className="text-xs font-semibold mb-2 uppercase tracking-wide text-gray-700">TO</label>
+          <input
+            type="date"
+            value={filters.to}
+            onChange={e => setFilters(f => ({ ...f, to: e.target.value }))}
+            className="bg-gray-50 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary w-full text-center font-medium"
+          />
         </div>
       </div>
       {/* Tabla */}
