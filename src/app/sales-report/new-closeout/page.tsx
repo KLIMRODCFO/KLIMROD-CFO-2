@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { getWeekCode } from "../../../../utils/getWeekCode";
 import { useActiveBU } from "../../ActiveBUContext";
 import { supabase } from "../../../../lib/supabaseClient";
 import { useUser } from "../../UserContext";
@@ -28,16 +29,22 @@ const GeneralInformation: React.FC<{
 	setManager: (manager: string) => void,
 	activeBU: string | null
 }> = ({ totals, buName, setBuName, date, setDate, day, setDay, events, setEvents, shifts, setShifts, managers, setManagers, event, setEvent, shift, setShift, manager, setManager, activeBU }) => {
+	const [startDate, setStartDate] = useState<string>("");
+	const [weekCode, setWeekCode] = useState<string>("");
 	useEffect(() => {
 		if (activeBU) {
 			supabase
 				.from("master_business_units")
-				.select("name")
+				.select("name, week1_start_date")
 				.eq("id", activeBU)
 				.single()
-				.then(({ data }) => setBuName(data?.name ? data.name.toUpperCase() : ""));
+				.then(({ data }) => {
+					setBuName(data?.name ? data.name.toUpperCase() : "");
+					setStartDate(data?.week1_start_date || "");
+				});
 		} else {
 			setBuName("");
+			setStartDate("");
 		}
 	}, [activeBU]);
 	useEffect(() => {
@@ -45,10 +52,21 @@ const GeneralInformation: React.FC<{
 			const [year, month, dayNum] = date.split('-').map(Number);
 			const utcDate = new Date(Date.UTC(year, month - 1, dayNum));
 			setDay(utcDate.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }));
+			// Calcular weekCode automáticamente
+			if (startDate) {
+				try {
+					setWeekCode(getWeekCode(startDate, date));
+				} catch {
+					setWeekCode("");
+				}
+			} else {
+				setWeekCode("");
+			}
 		} else {
 			setDay("");
+			setWeekCode("");
 		}
-	}, [date]);
+	}, [date, startDate]);
 	useEffect(() => {
 		supabase
 			.from("master_event")
@@ -72,7 +90,7 @@ const GeneralInformation: React.FC<{
 	return (
 		<div className="bg-white rounded-xl shadow-card p-8 mb-8 w-full max-w-5xl mx-auto">
 			<h2 className="text-lg font-bold mb-6 text-black uppercase">General Information</h2>
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+			<div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
 				<div>
 					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">RESTAURANT</div>
 					<input type="text" value={buName} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
@@ -84,6 +102,10 @@ const GeneralInformation: React.FC<{
 				<div>
 					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">DAY</div>
 					<input type="text" value={day.toUpperCase()} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
+				</div>
+				<div>
+					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">WEEK CODE</div>
+					<input type="text" value={weekCode} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
 				</div>
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

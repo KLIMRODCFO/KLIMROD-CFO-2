@@ -1,3 +1,5 @@
+
+// Solo usar dotenv/config en scripts Node.js, nunca aquí
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

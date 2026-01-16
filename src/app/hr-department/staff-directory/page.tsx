@@ -12,11 +12,26 @@ interface Employee {
   position_id: number;
   business_unit_id: number;
   is_active: boolean;
+  pay_type_id?: number | null;
+  rate?: string | null;
   department?: { name: string };
   position?: { name: string };
+  pay_type?: { name: string };
 }
 
+
 export default function StaffDirectoryPage() {
+    const [payTypes, setPayTypes] = useState<{ id: number; name: string }[]>([]);
+    const [editPayType, setEditPayType] = useState<number | null>(null);
+    const [editRate, setEditRate] = useState<string>("");
+    // Fetch pay types
+    useEffect(() => {
+      const fetchPayTypes = async () => {
+        const { data } = await supabase.from("pay_types").select("id, name");
+        setPayTypes(data || []);
+      };
+      fetchPayTypes();
+    }, []);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showActive, setShowActive] = useState(true);
@@ -64,18 +79,22 @@ export default function StaffDirectoryPage() {
     setEditingId(emp.id);
     setEditDepartment(emp.department_id);
     setEditPosition(emp.position_id);
+    setEditPayType(emp.pay_type_id ?? null);
+    setEditRate(emp.rate ?? "");
   };
 
   const handleSave = async (id: number) => {
     setSaving(true);
     await supabase.from("master_employees_directory").update({
       department_id: editDepartment,
-      position_id: editPosition
+      position_id: editPosition,
+      pay_type_id: editPayType,
+      rate: editRate
     }).eq("id", id);
     // Refetch para obtener los datos actualizados de la relación
     let query = supabase
       .from("master_employees_directory")
-      .select("*, department:master_departments(name), position:master_positions(name)");
+      .select("*, department:master_departments(name), position:master_positions(name), pay_type:pay_types(name)");
     if (showActive) query = query.eq("is_active", true);
     if (activeBU) query = query.eq("business_unit_id", activeBU);
     const { data, error } = await query;
@@ -91,27 +110,29 @@ export default function StaffDirectoryPage() {
         <label className="font-semibold">Mostrar solo activos</label>
         <input type="checkbox" checked={showActive} onChange={() => setShowActive(v => !v)} />
       </div>
-      <div className="w-full max-w-5xl bg-white rounded shadow-lg overflow-x-auto">
+      <div className="w-full max-w-7xl bg-white rounded-2xl shadow-lg overflow-x-auto border border-gray-300">
         {loading ? (
           <div className="text-center py-10 text-lg font-semibold">Cargando...</div>
         ) : (
-          <table className="w-full border text-base">
+          <table className="w-full text-base min-w-[900px]">
             <thead>
-              <tr className="bg-gray-900 text-white text-center">
-                <th className="px-4 py-3">ID</th>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Departamento</th>
-                <th className="px-4 py-3">Posición</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Acciones</th>
+              <tr className="bg-black text-white text-center text-sm uppercase tracking-wider">
+                <th className="px-3 py-3">ID</th>
+                <th className="px-3 py-3">NAME</th>
+                <th className="px-3 py-3">DEPARTMENT</th>
+                <th className="px-3 py-3">POSITION</th>
+                <th className="px-3 py-3">PAY TYPE</th>
+                <th className="px-3 py-3">RATE</th>
+                <th className="px-3 py-3">STATUS</th>
+                <th className="px-3 py-3">ACTIONS</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-center text-sm">
               {employees.map(emp => (
-                <tr key={emp.id} className={`text-center ${emp.is_active ? "" : "bg-gray-200"}`}>
-                  <td className="px-4 py-3">{emp.id}</td>
-                  <td className="px-4 py-3 font-semibold">{emp.first_name} {emp.middle_name || ""} {emp.last_name}</td>
-                  <td className="px-4 py-3">
+                <tr key={emp.id} className={`border-b ${emp.is_active ? "bg-white" : "bg-gray-100"} hover:bg-gray-50 transition-all`}>
+                  <td className="px-3 py-3 font-mono text-xs text-gray-700">{emp.id}</td>
+                  <td className="px-3 py-3 font-semibold text-black whitespace-nowrap">{emp.first_name} {emp.middle_name || ""} {emp.last_name}</td>
+                  <td className="px-3 py-3 text-gray-800">
                     {editingId === emp.id ? (
                       <select className="border rounded px-2 py-1" value={editDepartment ?? ''} onChange={e => setEditDepartment(Number(e.target.value))}>
                         <option value="">Selecciona</option>
@@ -123,7 +144,7 @@ export default function StaffDirectoryPage() {
                       emp.department?.name || emp.department_id
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 text-gray-800">
                     {editingId === emp.id ? (
                       <select className="border rounded px-2 py-1" value={editPosition ?? ''} onChange={e => setEditPosition(Number(e.target.value))}>
                         <option value="">Selecciona</option>
@@ -135,18 +156,43 @@ export default function StaffDirectoryPage() {
                       emp.position?.name || emp.position_id
                     )}
                   </td>
-                  <td className="px-4 py-3 font-bold">{emp.is_active ? <span className="text-green-700">ACTIVO</span> : <span className="text-red-700">INACTIVO</span>}</td>
-                  <td className="px-4 py-3 flex gap-2 justify-center">
+                  {editingId === emp.id ? (
+                    <td className="px-3 py-3">
+                      <select className="border border-gray-400 rounded-lg px-2 py-1 bg-white text-gray-900 text-xs" value={editPayType ?? ''} onChange={e => setEditPayType(Number(e.target.value) || null)}>
+                        <option value="">Select pay type</option>
+                        {payTypes.map(pt => (
+                          <option key={pt.id} value={pt.id}>{pt.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                  ) : (
+                    <td className="px-3 py-3 text-gray-900">{emp.pay_type?.name || ''}</td>
+                  )}
+                  {editingId === emp.id ? (
+                    <td className="px-3 py-3">
+                      <input className="w-full border border-gray-400 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 min-w-[110px]" type="text" inputMode="decimal" pattern="^[0-9]*[.,]?[0-9]*$" value={editRate} onChange={e => setEditRate(e.target.value)} />
+                    </td>
+                  ) : (
+                    <td className="px-3 py-3 text-gray-900">{emp.rate || ''}</td>
+                  )}
+                  <td className="px-3 py-3 font-bold">
+                    {emp.is_active ? (
+                      <span className="bg-black text-white rounded-full px-4 py-1 text-xs font-bold tracking-widest">ACTIVE</span>
+                    ) : (
+                      <span className="bg-gray-700 text-white rounded-full px-4 py-1 text-xs font-bold tracking-widest">INACTIVE</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 flex gap-2 justify-center">
                     {editingId === emp.id ? (
                       <>
-                        <button className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 transition" onClick={() => handleSave(emp.id)} disabled={saving}>Guardar</button>
-                        <button className="bg-gray-400 text-white px-4 py-2 rounded shadow hover:bg-gray-500 transition" onClick={() => setEditingId(null)} disabled={saving}>Cancelar</button>
+                        <button className="bg-black text-white px-3 py-1 rounded-full text-xs font-bold shadow hover:bg-gray-800 transition" onClick={() => handleSave(emp.id)} disabled={saving}>SAVE</button>
+                        <button className="bg-gray-400 text-white px-3 py-1 rounded-full text-xs font-bold shadow hover:bg-gray-500 transition" onClick={() => setEditingId(null)} disabled={saving}>CANCEL</button>
                       </>
                     ) : (
                       <>
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition" onClick={() => handleEdit(emp)}>Editar</button>
-                        <button className={`px-4 py-2 rounded shadow transition ${emp.is_active ? "bg-red-600 hover:bg-red-700 text-white" : "bg-green-600 hover:bg-green-700 text-white"}`} onClick={() => handleToggleActive(emp.id, emp.is_active)}>
-                          {emp.is_active ? "Desactivar" : "Activar"}
+                        <button className="border border-black text-black px-3 py-1 rounded-full text-xs font-bold shadow hover:bg-black hover:text-white transition" onClick={() => handleEdit(emp)}>EDIT</button>
+                        <button className={`px-3 py-1 rounded-full text-xs font-bold shadow transition ${emp.is_active ? "border border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white" : "border border-green-700 text-green-700 hover:bg-green-700 hover:text-white"}`} onClick={() => handleToggleActive(emp.id, emp.is_active)}>
+                          {emp.is_active ? "DEACTIVATE" : "ACTIVATE"}
                         </button>
                       </>
                     )}

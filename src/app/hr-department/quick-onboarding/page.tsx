@@ -4,6 +4,17 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
 
 export default function QuickOnboardingPage() {
+    const [payTypes, setPayTypes] = useState<{ id: number; name: string }[]>([]);
+    const [selectedPayType, setSelectedPayType] = useState<number | null>(null);
+    const [rate, setRate] = useState("");
+    // Fetch pay types
+    useEffect(() => {
+      const fetchPayTypes = async () => {
+        const { data } = await supabase.from("pay_types").select("id, name");
+        setPayTypes(data || []);
+      };
+      fetchPayTypes();
+    }, []);
   const { activeBU } = useActiveBU();
   const [buName, setBuName] = useState<string>("");
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
@@ -82,6 +93,8 @@ export default function QuickOnboardingPage() {
             business_unit_id: activeBU,
             department_id: selectedDepartment,
             position_id: selectedPosition,
+            pay_type_id: selectedPayType,
+            rate: rate || null,
             first_name: firstName.toUpperCase(),
             middle_name: middleName ? middleName.toUpperCase() : null,
             last_name: lastName.toUpperCase(),
@@ -154,6 +167,36 @@ export default function QuickOnboardingPage() {
                       <option key={pos.id} value={pos.id}>{pos.name}</option>
                     ))}
                   </select>
+                </td>
+              </tr>
+              <tr>
+                <td className="bg-gray-900 text-white font-bold px-6 py-3">PAY TYPE *</td>
+                <td className="px-6 py-3">
+                  <select
+                    className="w-full border rounded px-2 py-1"
+                    value={selectedPayType ?? ''}
+                    onChange={e => setSelectedPayType(Number(e.target.value) || null)}
+                    required
+                  >
+                    <option value="">Select pay type</option>
+                    {payTypes.map(pt => (
+                      <option key={pt.id} value={pt.id}>{pt.name}</option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td className="bg-gray-900 text-white font-bold px-6 py-3">RATE *</td>
+                <td className="px-6 py-3">
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="^[0-9]*[.,]?[0-9]*$"
+                    value={rate}
+                    onChange={e => setRate(e.target.value)}
+                    required
+                  />
                 </td>
               </tr>
               <tr>
