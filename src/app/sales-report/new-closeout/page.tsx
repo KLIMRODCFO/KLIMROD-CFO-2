@@ -565,7 +565,8 @@ const NewCloseoutPage: React.FC = () => {
 								       totals_cash_gratuity: totals.cashGratuity,
 								       totals_points: totals.points,
 								       user_id: user?.id || null,
-								       week_code: weekCode
+									   week_code: weekCode,
+									   business_unit_id: activeBU
 							       };
 						// Insertar en closeout_reports
 						const { data: report, error: reportError } = await supabase
@@ -593,7 +594,8 @@ const NewCloseoutPage: React.FC = () => {
 							   share_cc_gratuity: totals.ccGratuity && totals.points ? (totals.ccGratuity * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0,
 							   share_cash_gratuity: totals.cashGratuity && totals.points ? (totals.cashGratuity * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0,
 							   percent: totals.points ? (100 * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0,
-							   week_code: weekCode
+							   week_code: weekCode,
+							   business_unit_id: activeBU
 						   }));
 						// Insertar empleados
 						const { error: empError } = await supabase
