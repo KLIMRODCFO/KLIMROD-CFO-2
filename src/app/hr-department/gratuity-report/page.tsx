@@ -57,20 +57,16 @@ const GratuityReportPage: React.FC = () => {
 		query.then(({ data }) => {
 			let filtered = data || [];
 			if (filters.dateFrom) {
-				filtered = filtered.filter(row =>
-					row.closeout_reports &&
-					!Array.isArray(row.closeout_reports) &&
-					row.closeout_reports.date &&
-					row.closeout_reports.date >= filters.dateFrom
-				);
+				filtered = filtered.filter(row => {
+					const report = row.closeout_reports as { date?: string } | undefined;
+					return report && typeof report.date === "string" && report.date >= filters.dateFrom;
+				});
 			}
 			if (filters.dateTo) {
-				filtered = filtered.filter(row =>
-					row.closeout_reports &&
-					!Array.isArray(row.closeout_reports) &&
-					row.closeout_reports.date &&
-					row.closeout_reports.date <= filters.dateTo
-				);
+				filtered = filtered.filter(row => {
+					const report = row.closeout_reports as { date?: string } | undefined;
+					return report && typeof report.date === "string" && report.date <= filters.dateTo;
+				});
 			}
 			setData(filtered);
 		});
