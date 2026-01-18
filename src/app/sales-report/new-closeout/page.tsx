@@ -566,10 +566,8 @@ const NewCloseoutPage: React.FC = () => {
 								       totals_points: totals.points,
 								       user_id: user?.id || null,
 									   week_code: weekCode,
-									   business_unit_id: activeBU
 							       };
-						// Insertar en closeout_reports
-						const { data: report, error: reportError } = await supabase
+									   week_code: weekCode
 							.from("closeout_reports")
 							.insert([reportData])
 							.select()
