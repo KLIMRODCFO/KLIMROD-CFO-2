@@ -1,4 +1,6 @@
+
 "use client";
+import * as XLSX from "xlsx";
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -76,9 +78,59 @@ const GratuityReportPage: React.FC = () => {
 	const totalCCGratuity = data.reduce((sum, row) => sum + (Number(row.share_cc_gratuity) || 0), 0);
 	const totalCashGratuity = data.reduce((sum, row) => sum + (Number(row.share_cash_gratuity) || 0), 0);
 
+	// Exportar a Excel
+	const handleExportExcel = () => {
+		let exportData = [];
+		if (filters.mode === "detail") {
+			exportData = data.map(row => ({
+				WEEK: row.week_code,
+				DATE: row.closeout_reports?.date || "",
+				SHIFT: row.closeout_reports?.shift_name || "",
+				EMPLOYEE: row.employee_name,
+				POSITION: row.position_name,
+				"CC GRATUITY": row.share_cc_gratuity,
+				"CASH GRATUITY": row.share_cash_gratuity,
+				POINTS: row.points
+			}));
+		} else {
+			// Total by employee
+			exportData = Object.values(
+				data.reduce((acc, row) => {
+					const key = `${row.employee_name}|${row.position_name}|${row.week_code}`;
+					if (!acc[key]) {
+						acc[key] = {
+							WEEK: row.week_code,
+							EMPLOYEE: row.employee_name,
+							POSITION: row.position_name,
+							"CC GRATUITY": 0,
+							"CASH GRATUITY": 0,
+							POINTS: 0
+						};
+					}
+					acc[key]["CC GRATUITY"] += Number(row.share_cc_gratuity) || 0;
+					acc[key]["CASH GRATUITY"] += Number(row.share_cash_gratuity) || 0;
+					acc[key]["POINTS"] += Number(row.points) || 0;
+					return acc;
+				}, {})
+			);
+		}
+		const ws = XLSX.utils.json_to_sheet(exportData);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Gratuity Report");
+		XLSX.writeFile(wb, "gratuity_report.xlsx");
+	};
+
 	return (
 		<div className="min-h-screen bg-bg py-8">
-			<h1 className="text-2xl font-bold text-primary text-center mb-8 uppercase tracking-widest">Gratuity Report</h1>
+			<div className="flex items-center justify-between max-w-7xl mx-auto mb-2">
+				<h1 className="text-2xl font-bold text-primary text-center uppercase tracking-widest">Gratuity Report</h1>
+				<button
+					onClick={handleExportExcel}
+					className="bg-black hover:bg-gray-800 text-white font-bold py-2 px-6 rounded-lg shadow transition"
+				>
+					Export Excel
+				</button>
+			</div>
 			<div className="flex flex-wrap justify-center gap-8 mb-6">
 				<div className="bg-white rounded-xl shadow-card px-8 py-4 flex flex-col items-center">
 					<span className="text-xs font-semibold text-gray-500 uppercase mb-1">Total CC Gratuity</span>
