@@ -565,13 +565,13 @@ const NewCloseoutPage: React.FC = () => {
 								       totals_cash_gratuity: totals.cashGratuity,
 								       totals_points: totals.points,
 								       user_id: user?.id || null,
-									   week_code: weekCode,
-							       };
-									   week_code: weekCode
-							.from("closeout_reports")
-							.insert([reportData])
-							.select()
-							.single();
+									       week_code: weekCode,
+								       };
+								const { data: report, error: reportError } = await supabase
+								    .from("closeout_reports")
+								    .insert([reportData])
+								    .select()
+								    .single();
 						if (reportError) {
 							alert("Error al guardar el reporte: " + reportError.message);
 							return;
