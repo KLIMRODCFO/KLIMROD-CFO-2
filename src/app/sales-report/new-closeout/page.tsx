@@ -578,22 +578,23 @@ const NewCloseoutPage: React.FC = () => {
 							return;
 						}
 						// Preparar datos para closeout_report_employees
-						const employeesData = rows.map(row => ({
-							report_id: report.id,
-							employee_id: row.employee,
-							employee_name: row.employee_name,
-							position_id: row.position_id || null,
-							position_name: row.position,
-							net_sales: row.netSales === "" ? 0 : Number(row.netSales),
-							cash_sales: row.cashSales === "" ? 0 : Number(row.cashSales),
-							cc_sales: row.ccSales === "" ? 0 : Number(row.ccSales),
-							cc_gratuity: row.ccGratuity === "" ? 0 : Number(row.ccGratuity),
-							cash_gratuity: row.cashGratuity === "" ? 0 : Number(row.cashGratuity),
-							points: row.points === "" ? 0 : Number(row.points),
-							share_cc_gratuity: totals.ccGratuity && totals.points ? (totals.ccGratuity * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0,
-							share_cash_gratuity: totals.cashGratuity && totals.points ? (totals.cashGratuity * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0,
-							percent: totals.points ? (100 * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0
-						}));
+						   const employeesData = rows.map(row => ({
+							   report_id: report.id,
+							   employee_id: row.employee,
+							   employee_name: row.employee_name,
+							   position_id: row.position_id || null,
+							   position_name: row.position,
+							   net_sales: row.netSales === "" ? 0 : Number(row.netSales),
+							   cash_sales: row.cashSales === "" ? 0 : Number(row.cashSales),
+							   cc_sales: row.ccSales === "" ? 0 : Number(row.ccSales),
+							   cc_gratuity: row.ccGratuity === "" ? 0 : Number(row.ccGratuity),
+							   cash_gratuity: row.cashGratuity === "" ? 0 : Number(row.cashGratuity),
+							   points: row.points === "" ? 0 : Number(row.points),
+							   share_cc_gratuity: totals.ccGratuity && totals.points ? (totals.ccGratuity * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0,
+							   share_cash_gratuity: totals.cashGratuity && totals.points ? (totals.cashGratuity * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0,
+							   percent: totals.points ? (100 * (row.points === "" ? 0 : Number(row.points)) / totals.points) : 0,
+							   week_code: weekCode
+						   }));
 						// Insertar empleados
 						const { error: empError } = await supabase
 							.from("closeout_report_employees")
