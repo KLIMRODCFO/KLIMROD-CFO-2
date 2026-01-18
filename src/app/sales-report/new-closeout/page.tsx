@@ -27,46 +27,47 @@ const GeneralInformation: React.FC<{
 	setShift: (shift: string) => void,
 	manager: string,
 	setManager: (manager: string) => void,
-	activeBU: string | null
-}> = ({ totals, buName, setBuName, date, setDate, day, setDay, events, setEvents, shifts, setShifts, managers, setManagers, event, setEvent, shift, setShift, manager, setManager, activeBU }) => {
+	activeBU: string | null,
+	weekCode: string,
+	setWeekCode: (code: string) => void
+}> = ({ totals, buName, setBuName, date, setDate, day, setDay, events, setEvents, shifts, setShifts, managers, setManagers, event, setEvent, shift, setShift, manager, setManager, activeBU, weekCode, setWeekCode }) => {
 	const [startDate, setStartDate] = useState<string>("");
-	const [weekCode, setWeekCode] = useState<string>("");
-	useEffect(() => {
-		if (activeBU) {
-			supabase
-				.from("master_business_units")
-				.select("name, week1_start_date")
-				.eq("id", activeBU)
-				.single()
-				.then(({ data }) => {
-					setBuName(data?.name ? data.name.toUpperCase() : "");
-					setStartDate(data?.week1_start_date || "");
-				});
-		} else {
-			setBuName("");
-			setStartDate("");
-		}
-	}, [activeBU]);
-	useEffect(() => {
-		if (date) {
-			const [year, month, dayNum] = date.split('-').map(Number);
-			const utcDate = new Date(Date.UTC(year, month - 1, dayNum));
-			setDay(utcDate.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }));
-			// Calcular weekCode automáticamente
-			if (startDate) {
-				try {
-					setWeekCode(getWeekCode(startDate, date));
-				} catch {
-					setWeekCode("");
-				}
-			} else {
-				setWeekCode("");
-			}
-		} else {
-			setDay("");
-			setWeekCode("");
-		}
-	}, [date, startDate]);
+	       useEffect(() => {
+		       if (activeBU) {
+			       supabase
+				       .from("master_business_units")
+				       .select("name, week1_start_date")
+				       .eq("id", activeBU)
+				       .single()
+				       .then(({ data }) => {
+					       setBuName(data?.name ? data.name.toUpperCase() : "");
+					       setStartDate(data?.week1_start_date || "");
+				       });
+		       } else {
+			       setBuName("");
+			       setStartDate("");
+		       }
+	       }, [activeBU]);
+	       useEffect(() => {
+		       if (date) {
+			       const [year, month, dayNum] = date.split('-').map(Number);
+			       const utcDate = new Date(Date.UTC(year, month - 1, dayNum));
+			       setDay(utcDate.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }));
+			       // Calcular weekCode automáticamente
+			       if (startDate) {
+				       try {
+					       setWeekCode(getWeekCode(startDate, date));
+				       } catch {
+					       setWeekCode("");
+				       }
+			       } else {
+				       setWeekCode("");
+			       }
+		       } else {
+			       setDay("");
+			       setWeekCode("");
+		       }
+	       }, [date, startDate]);
 	useEffect(() => {
 		supabase
 			.from("master_event")
@@ -103,10 +104,10 @@ const GeneralInformation: React.FC<{
 					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">DAY</div>
 					<input type="text" value={day.toUpperCase()} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
 				</div>
-				<div>
-					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">WEEK CODE</div>
-					<input type="text" value={weekCode} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
-				</div>
+				       <div>
+					       <div className="text-xs font-bold text-gray-700 mb-1 uppercase">WEEK CODE</div>
+					       <input type="text" value={weekCode} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
+				       </div>
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
 				<div>
@@ -137,35 +138,29 @@ const GeneralInformation: React.FC<{
 					</select>
 				</div>
 			</div>
-			<div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-				<div>
-					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">NET SALES</div>
-					<input type="text" value={totals.netSales.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
-				</div>
-				<div>
-					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">CC SALES</div>
-					<input type="text" value={totals.ccSales.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
-				</div>
-				<div>
-					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">CASH SALES</div>
-					<input type="text" value={totals.cashSales.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
-				</div>
-				<div>
-					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">CC GRATUITY</div>
-					<input type="text" value={totals.ccGratuity.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
-				</div>
-				<div>
-					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">CASH GRATUITY</div>
-					<input type="text" value={totals.cashGratuity.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
-				</div>
-				<div>
-					<div className="text-xs font-bold text-gray-700 mb-1 uppercase">POINTS</div>
-					<input type="text" value={String(totals.points).toUpperCase()} disabled className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase" />
-				</div>
-			</div>
-		</div>
-  );
-};
+			   <div className="w-full mt-6">
+				   <div className="bg-gray-100 rounded-lg p-4 flex flex-col">
+					   <div className="grid grid-cols-6 gap-4 mb-2">
+						   <div className="text-xs font-bold text-gray-700 uppercase text-center">Net Sales</div>
+						   <div className="text-xs font-bold text-gray-700 uppercase text-center">CC Sales</div>
+						   <div className="text-xs font-bold text-gray-700 uppercase text-center">Cash Sales</div>
+						   <div className="text-xs font-bold text-gray-700 uppercase text-center">CC Gratuity</div>
+						   <div className="text-xs font-bold text-gray-700 uppercase text-center">Cash Gratuity</div>
+						   <div className="text-xs font-bold text-gray-700 uppercase text-center">Points</div>
+					   </div>
+					   <div className="grid grid-cols-6 gap-4">
+						   <div className="bg-white rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 text-right">{totals.netSales.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()}</div>
+						   <div className="bg-white rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 text-right">{totals.ccSales.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()}</div>
+						   <div className="bg-white rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 text-right">{totals.cashSales.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()}</div>
+						   <div className="bg-white rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 text-right">{totals.ccGratuity.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()}</div>
+						   <div className="bg-white rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 text-right">{totals.cashGratuity.toLocaleString("en-US", { style: "currency", currency: "USD" }).toUpperCase()}</div>
+						   <div className="bg-white rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 text-right">{String(totals.points).toUpperCase()}</div>
+					   </div>
+				   </div>
+			   </div>
+			   </div>
+	   );
+	}
 
 
 // --- Sales and Employees Details Block ---
@@ -502,6 +497,7 @@ const NewCloseoutPage: React.FC = () => {
 	const [event, setEvent] = useState("");
 	const [shift, setShift] = useState("");
 	const [manager, setManager] = useState("");
+	const [weekCode, setWeekCode] = useState<string>("");
 
 	const [successMsg, setSuccessMsg] = useState("");
 	return (
@@ -520,28 +516,30 @@ const NewCloseoutPage: React.FC = () => {
 					</div>
 				</div>
 			)}
-			<GeneralInformation
-				totals={totals}
-				buName={buName}
-				setBuName={setBuName}
-				date={date}
-				setDate={setDate}
-				day={day}
-				setDay={setDay}
-				events={events}
-				setEvents={setEvents}
-				shifts={shifts}
-				setShifts={setShifts}
-				managers={managers}
-				setManagers={setManagers}
-				event={event}
-				setEvent={setEvent}
-				shift={shift}
-				setShift={setShift}
-				manager={manager}
-				setManager={setManager}
-				activeBU={activeBU}
-			/>
+			       <GeneralInformation
+				       totals={totals}
+				       buName={buName}
+				       setBuName={setBuName}
+				       date={date}
+				       setDate={setDate}
+				       day={day}
+				       setDay={setDay}
+				       events={events}
+				       setEvents={setEvents}
+				       shifts={shifts}
+				       setShifts={setShifts}
+				       managers={managers}
+				       setManagers={setManagers}
+				       event={event}
+				       setEvent={setEvent}
+				       shift={shift}
+				       setShift={setShift}
+				       manager={manager}
+				       setManager={setManager}
+				       activeBU={activeBU}
+				       weekCode={weekCode}
+				       setWeekCode={setWeekCode}
+			       />
 			<SalesEmployeesDetails onTotalsChange={setTotals} activeBU={activeBU} rows={rows} setRows={setRows} />
 			<GratuityDistribution rows={rows} totals={totals} />
 			<div className="flex justify-center mt-8">
@@ -549,25 +547,26 @@ const NewCloseoutPage: React.FC = () => {
 					className="bg-black text-white px-6 py-2 rounded-lg font-semibold text-base shadow hover:bg-gray-800 transition uppercase tracking-widest"
 					onClick={async () => {
 						       // Preparar datos para closeout_reports
-						       const reportData = {
-							       business_unit_id: activeBU,
-							       business_unit_name: buName,
-							       date,
-							       day,
-							       event_id: event,
-							       event_name: events.find(e => String(e.id) === String(event))?.name || "",
-							       shift_id: shift,
-							       shift_name: shifts.find(s => String(s.id) === String(shift))?.name || "",
-							       manager_id: manager,
-							       manager_name: managers.find(m => String(m.id) === String(manager))?.name || "",
-							       totals_net_sales: totals.netSales,
-							       totals_cc_sales: totals.ccSales,
-							       totals_cash_sales: totals.cashSales,
-							       totals_cc_gratuity: totals.ccGratuity,
-							       totals_cash_gratuity: totals.cashGratuity,
-							       totals_points: totals.points,
-									   user_id: user?.id || null
-						       };
+							       const reportData = {
+								       business_unit_id: activeBU,
+								       business_unit_name: buName,
+								       date,
+								       day,
+								       event_id: event,
+								       event_name: events.find(e => String(e.id) === String(event))?.name || "",
+								       shift_id: shift,
+								       shift_name: shifts.find(s => String(s.id) === String(shift))?.name || "",
+								       manager_id: manager,
+								       manager_name: managers.find(m => String(m.id) === String(manager))?.name || "",
+								       totals_net_sales: totals.netSales,
+								       totals_cc_sales: totals.ccSales,
+								       totals_cash_sales: totals.cashSales,
+								       totals_cc_gratuity: totals.ccGratuity,
+								       totals_cash_gratuity: totals.cashGratuity,
+								       totals_points: totals.points,
+								       user_id: user?.id || null,
+								       week_code: weekCode
+							       };
 						// Insertar en closeout_reports
 						const { data: report, error: reportError } = await supabase
 							.from("closeout_reports")
