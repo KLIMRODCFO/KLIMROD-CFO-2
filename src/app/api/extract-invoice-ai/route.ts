@@ -67,7 +67,7 @@ export async function POST(req: Request) {
         };
         // Items
         const items = Array.isArray(parsed.items)
-          ? parsed.items.map((item) => ({
+          ? parsed.items.map((item: any) => ({
               product_ai: item.product_ai || "",
               amount: item.amount || ""
             }))
