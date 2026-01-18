@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useActiveBU } from "../../ActiveBUContext";
 import { getWeekCode } from "../../../../utils/getWeekCode";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -60,15 +60,28 @@ export default function InvoiceAllocationPage() {
   // afterAdjustment se calcula restando el ajuste del total de la factura
   const afterAdjustment = invoiceTotal - (adjustment ?? 0);
 
-  // Suponiendo que activeBU.start_date existe y es YYYY-MM-DD
-  let weekCode = '';
-  try {
-    if (activeBU && generalInfo.invoice_date) {
-      weekCode = getWeekCode(activeBU.start_date, generalInfo.invoice_date);
-    }
-  } catch (e) {
-    weekCode = '';
-  }
+  // Obtener la fecha de inicio del BU activo desde Supabase para calcular weekCode
+  const [weekCode, setWeekCode] = useState('');
+  useEffect(() => {
+    const fetchStartDateAndSetWeekCode = async () => {
+      if (activeBU && generalInfo.invoice_date) {
+        try {
+          const { data: buData, error: buError } = await supabase
+            .from('master_business_units')
+            .select('week1_start_date')
+            .eq('id', activeBU)
+            .single();
+          if (buError || !buData || !buData.week1_start_date) throw new Error('No se pudo obtener la fecha de inicio del BU');
+          setWeekCode(getWeekCode(buData.week1_start_date, generalInfo.invoice_date));
+        } catch {
+          setWeekCode('');
+        }
+      } else {
+        setWeekCode('');
+      }
+    };
+    fetchStartDateAndSetWeekCode();
+  }, [activeBU, generalInfo.invoice_date]);
 
   // File upload and OpenAI extraction
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

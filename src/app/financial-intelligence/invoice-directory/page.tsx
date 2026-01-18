@@ -16,7 +16,7 @@ const columns = [
 ];
 
 export default function InvoiceDirectoryPage() {
-  const [invoices, setInvoices] = useState([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [filters, setFilters] = useState({
     week: "",
     from: "",

@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       allItems = allItems.concat(normalized.items);
     }
     return NextResponse.json({ data: { generalInfo: generalInfo || {}, items: allItems } });
-    function normalizeInvoiceData(raw) {
+    function normalizeInvoiceData(raw: any) {
       let parsed;
       try {
         parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
       };
       // Items
       const items = Array.isArray(parsed.items)
-        ? parsed.items.map((item) => ({
+        ? parsed.items.map((item: any) => ({
             product_ai: item.product_ai || "",
             amount: item.amount || ""
           }))
@@ -105,8 +105,7 @@ export async function POST(req: Request) {
       return { generalInfo, items };
     }
 
-    const normalized = normalizeInvoiceData(response.choices[0].message.content);
-    return NextResponse.json({ data: normalized });
+    // Removed unreachable/incorrect code referencing 'response'
   } catch (err) {
     console.error('[extract-invoice-ai] OpenAI Vision error:', err);
     return NextResponse.json({ error: "OpenAI Vision error", details: String(err) }, { status: 500 });
