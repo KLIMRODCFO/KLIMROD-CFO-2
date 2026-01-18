@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         max_tokens: 800,
       });
       // Normalización de la respuesta para asegurar que todos los campos existen
-      function normalizeInvoiceData(raw) {
+      function normalizeInvoiceData(raw: any) {
         let parsed;
         try {
           parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
