@@ -14,6 +14,7 @@ interface Employee {
   is_active: boolean;
   pay_type_id?: number | null;
   rate?: string | null;
+  pos_id?: string | null; // NUEVO
   department?: { name: string };
   position?: { name: string };
   pay_type?: { name: string };
@@ -21,9 +22,11 @@ interface Employee {
 
 
 export default function StaffDirectoryPage() {
-    const [payTypes, setPayTypes] = useState<{ id: number; name: string }[]>([]);
-    const [editPayType, setEditPayType] = useState<number | null>(null);
-    const [editRate, setEditRate] = useState<string>("");
+  const [payTypes, setPayTypes] = useState<{ id: number; name: string }[]>([]);
+  const [editPayType, setEditPayType] = useState<number | null>(null);
+  const [editRate, setEditRate] = useState<string>("");
+  // Buscador de nombres
+  const [search, setSearch] = useState("");
     // Fetch pay types
     useEffect(() => {
       const fetchPayTypes = async () => {
@@ -40,6 +43,7 @@ export default function StaffDirectoryPage() {
   const [editDepartment, setEditDepartment] = useState<number | null>(null);
   const [editPosition, setEditPosition] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editPosId, setEditPosId] = useState<string>("");
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -81,6 +85,7 @@ export default function StaffDirectoryPage() {
     setEditPosition(emp.position_id);
     setEditPayType(emp.pay_type_id ?? null);
     setEditRate(emp.rate ?? "");
+    setEditPosId(emp.pos_id ?? "");
   };
 
   const handleSave = async (id: number) => {
@@ -89,7 +94,8 @@ export default function StaffDirectoryPage() {
       department_id: editDepartment,
       position_id: editPosition,
       pay_type_id: editPayType,
-      rate: editRate
+      rate: editRate,
+      pos_id: editPosId
     }).eq("id", id);
     // Refetch para obtener los datos actualizados de la relación
     let query = supabase
@@ -110,6 +116,28 @@ export default function StaffDirectoryPage() {
         <label className="font-semibold">Mostrar solo activos</label>
         <input type="checkbox" checked={showActive} onChange={() => setShowActive(v => !v)} />
       </div>
+      {/* Buscador sobre la columna de nombres */}
+      <div className="w-full max-w-7xl overflow-x-auto">
+        <table className="w-full text-base min-w-[900px]">
+          <thead>
+            <tr className="bg-white">
+              <th></th>
+              <th></th>
+              <th className="px-3 py-2">
+                <input
+                  type="text"
+                  className="border border-gray-400 rounded-lg px-2 py-1 w-full text-xs"
+                  placeholder="Buscar por nombre..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ minWidth: 120 }}
+                />
+              </th>
+              <th colSpan={6}></th>
+            </tr>
+          </thead>
+        </table>
+      </div>
       <div className="w-full max-w-7xl bg-white rounded-2xl shadow-lg overflow-x-auto border border-gray-300">
         {loading ? (
           <div className="text-center py-10 text-lg font-semibold">Cargando...</div>
@@ -118,6 +146,7 @@ export default function StaffDirectoryPage() {
             <thead>
               <tr className="bg-black text-white text-center text-sm uppercase tracking-wider">
                 <th className="px-3 py-3">ID</th>
+                <th className="px-3 py-3">POS ID</th>
                 <th className="px-3 py-3">NAME</th>
                 <th className="px-3 py-3">DEPARTMENT</th>
                 <th className="px-3 py-3">POSITION</th>
@@ -128,9 +157,26 @@ export default function StaffDirectoryPage() {
               </tr>
             </thead>
             <tbody className="text-center text-sm">
-              {employees.map(emp => (
+              {employees
+                .filter(emp => {
+                  const fullName = `${emp.first_name} ${emp.middle_name || ''} ${emp.last_name}`.toLowerCase();
+                  return fullName.includes(search.toLowerCase());
+                })
+                .map(emp => (
                 <tr key={emp.id} className={`border-b ${emp.is_active ? "bg-white" : "bg-gray-100"} hover:bg-gray-50 transition-all`}>
                   <td className="px-3 py-3 font-mono text-xs text-gray-700">{emp.id}</td>
+                  {editingId === emp.id ? (
+                    <td className="px-3 py-3">
+                      <input
+                        className="w-full border border-gray-400 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 min-w-[90px]"
+                        type="text"
+                        value={editPosId}
+                        onChange={e => setEditPosId(e.target.value)}
+                      />
+                    </td>
+                  ) : (
+                    <td className="px-3 py-3 text-gray-900">{emp.pos_id || ''}</td>
+                  )}
                   <td className="px-3 py-3 font-semibold text-black whitespace-nowrap">{emp.first_name} {emp.middle_name || ""} {emp.last_name}</td>
                   <td className="px-3 py-3 text-gray-800">
                     {editingId === emp.id ? (

@@ -1,5 +1,9 @@
+"use client";
 export default function TimeAttendancePage() {
-  return (
-    <div className="text-3xl font-bold text-center mt-20">TIME & ATTENDANCE</div>
-  );
+	return (
+		<div>
+			<h1>Time & Attendance</h1>
+			<p>This is the Time & Attendance page.</p>
+		</div>
+	);
 }
