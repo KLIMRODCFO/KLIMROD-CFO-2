@@ -7,6 +7,7 @@ import { supabase } from "../../../../lib/supabaseClient";
 import { useActiveBU } from "../../ActiveBUContext";
 
 
+
 const GratuityReportPage: React.FC = () => {
 	const { activeBU } = useActiveBU();
 	const [data, setData] = useState<any[]>([]);
@@ -19,22 +20,16 @@ const GratuityReportPage: React.FC = () => {
 		position: "",
 		mode: "detail" // "detail" o "total"
 	});
+	const [allRows, setAllRows] = useState<any[]>([]);
 	const [weeks, setWeeks] = useState<string[]>([]);
 	const [shifts, setShifts] = useState<string[]>([]);
 	const [employees, setEmployees] = useState<string[]>([]);
 	const [positions, setPositions] = useState<string[]>([]);
 
-	// Cargar opciones de filtro basadas en los datos ya traídos (data)
-	useEffect(() => {
-		setWeeks(Array.from(new Set(data.map((row: any) => row.week_code)).values()).filter(Boolean));
-		setShifts(Array.from(new Set(data.map((row: any) => row.closeout_reports?.shift_name)).values()).filter(Boolean));
-		setEmployees(Array.from(new Set(data.map((row: any) => row.employee_name)).values()).filter(Boolean));
-		setPositions(Array.from(new Set(data.map((row: any) => row.position_name)).values()).filter(Boolean));
-	}, [data]);
-
+	// Fetch all rows for dropdowns (once per BU)
 	useEffect(() => {
 		if (!activeBU) return;
-		let query = supabase
+		supabase
 			.from("closeout_report_employees")
 			.select(`
 				id,
@@ -49,30 +44,41 @@ const GratuityReportPage: React.FC = () => {
 					shift_name
 				)
 			`)
-			.eq("business_unit_id", activeBU);
+			.eq("business_unit_id", activeBU)
+			.then(({ data }) => {
+				setAllRows(data || []);
+			});
+	}, [activeBU]);
 
-		if (filters.week) query = query.eq("week_code", filters.week);
-		if (filters.shift) query = query.eq("closeout_reports.shift_name", filters.shift);
-		if (filters.employee) query = query.eq("employee_name", filters.employee);
-		if (filters.position) query = query.eq("position_name", filters.position);
+	// Populate dropdowns from allRows
+	useEffect(() => {
+		setWeeks(Array.from(new Set(allRows.map((row: any) => row.week_code)).values()).filter(Boolean));
+		setShifts(Array.from(new Set(allRows.map((row: any) => row.closeout_reports?.shift_name)).values()).filter(Boolean));
+		setEmployees(Array.from(new Set(allRows.map((row: any) => row.employee_name)).values()).filter(Boolean));
+		setPositions(Array.from(new Set(allRows.map((row: any) => row.position_name)).values()).filter(Boolean));
+	}, [allRows]);
 
-		query.then(({ data }) => {
-			let filtered = data || [];
-			if (filters.dateFrom) {
-				filtered = filtered.filter(row => {
-					const report = row.closeout_reports as { date?: string } | undefined;
-					return report && typeof report.date === "string" && report.date >= filters.dateFrom;
-				});
-			}
-			if (filters.dateTo) {
-				filtered = filtered.filter(row => {
-					const report = row.closeout_reports as { date?: string } | undefined;
-					return report && typeof report.date === "string" && report.date <= filters.dateTo;
-				});
-			}
-			setData(filtered);
-		});
-	}, [activeBU, filters]);
+	// Filter data based on filters
+	useEffect(() => {
+		let filtered = allRows;
+		if (filters.week) filtered = filtered.filter(row => row.week_code === filters.week);
+		if (filters.shift) filtered = filtered.filter(row => row.closeout_reports?.shift_name === filters.shift);
+		if (filters.employee) filtered = filtered.filter(row => row.employee_name === filters.employee);
+		if (filters.position) filtered = filtered.filter(row => row.position_name === filters.position);
+		if (filters.dateFrom) {
+			filtered = filtered.filter(row => {
+				const report = row.closeout_reports as { date?: string } | undefined;
+				return report && typeof report.date === "string" && report.date >= filters.dateFrom;
+			});
+		}
+		if (filters.dateTo) {
+			filtered = filtered.filter(row => {
+				const report = row.closeout_reports as { date?: string } | undefined;
+				return report && typeof report.date === "string" && report.date <= filters.dateTo;
+			});
+		}
+		setData(filtered);
+	}, [allRows, filters]);
 
 	// Calcular totales de CC y CASH GRATUITY según los datos filtrados
 	const totalCCGratuity = data.reduce((sum, row) => sum + (Number(row.share_cc_gratuity) || 0), 0);

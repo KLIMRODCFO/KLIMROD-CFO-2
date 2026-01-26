@@ -1,9 +1,10 @@
-"use client";
-export default function TimeAttendancePage() {
+import React from "react";
+
+export default function TimecardPage() {
 	return (
-		<div>
-			<h1>Time & Attendance</h1>
-			<p>This is the Time & Attendance page.</p>
-		</div>
+		<main className="flex flex-col items-center justify-center min-h-screen">
+			<h1 className="text-4xl font-bold mb-4">TIMECARD</h1>
+			{/* Aquí puedes comenzar a construir la página desde cero */}
+		</main>
 	);
 }

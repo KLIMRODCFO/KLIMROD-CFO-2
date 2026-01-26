@@ -1,113 +1,87 @@
-
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import getOpenAIClient from "../../../../lib/openaiClient";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { base64Images, base64Image } = await req.json();
-    console.log("[extract-invoice-ai] POST endpoint hit");
-    const images = base64Images || (base64Image ? [base64Image] : []);
-    if (!images || !Array.isArray(images) || images.length === 0) {
+    const { base64Images, bu_id } = await req.json();
+
+    if (!base64Images || !Array.isArray(base64Images)) {
       return NextResponse.json({ error: "No images provided" }, { status: 400 });
     }
-    if (!process.env.OPENAI_API_KEY) {
-      console.error("[extract-invoice-ai] OPENAI_API_KEY is not set");
-      return NextResponse.json({ error: "OpenAI API key not set on server" }, { status: 500 });
-    }
-    const openai = getOpenAIClient();
-    let allItems: any[] = [];
-    let generalInfo: any = null;
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i];
-      if (typeof img !== "string" || !img.startsWith("data:")) continue;
-      console.log(`[extract-invoice-ai] Processing image ${i + 1}/${images.length}`);
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text:
-                  `Extract the following fields from this invoice and return a JSON object with two keys:
-                  - generalInfo (object):
-                    - vendor_ai (string): The vendor or company issuing the invoice.
-                    - invoice_date (string): The invoice date (if not found, use shipment date or similar field).
-                    - due_date (string): The due date for payment (the latest date by which the invoice must be paid; if not found, leave empty).
-                    - bill_number (string): The invoice number.
-                    - terms (string): The payment terms (e.g., NET 15, NET 30).
-                  - items (array of objects): Each object must have:
-                    - product_ai (string): The product or service description.
-                    - amount (string): The total amount for that item (never the unit price, always the line total or extended price).
-                  If any field is missing or not visible, return it as an empty string. Respond ONLY with valid JSON, no explanation, no markdown, no code block, no extra text.`
-              },
-              { type: "image_url", image_url: { url: img } },
-            ],
+
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash" 
+    });
+
+    const results = [];
+
+    for (const base64Image of base64Images) {
+      // Detectar MimeType y limpiar Base64
+      const mimeTypeMatch = base64Image.match(/^data:(.*?);base64,/);
+      const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : "image/jpeg";
+      const base64Data = base64Image.split(",")[1];
+
+      // PROMPT BLINDADO: Instrucciones agresivas para evitar campos NULL
+      const prompt = `
+        Analyze this restaurant invoice document for Business Unit ID: ${bu_id}.
+        
+        CRITICAL EXTRACTION RULES:
+        1. "product_ai" field is MANDATORY. You must extract the text from the "DESCRIPTION INFO" column.
+        2. "item" field must contain the "ITEM# / CUSTOMER ITEM#" value.
+        3. "qty" must be the numerical quantity.
+        4. "units" must be the Unit of Measure (CS, LB, EA, PC, etc.).
+        5. "unit_price" and "amount" must be numbers.
+
+        Return ONLY a JSON object with this exact structure:
+        {
+          "generalInfo": {
+            "vendor_ai": "string",
+            "invoice_date": "YYYY-MM-DD",
+            "due_date": "YYYY-MM-DD",
+            "bill_number": "string",
+            "terms": "string",
+            "total_amount": number
           },
-        ],
-        max_tokens: 800,
-      });
-      // Normalización de la respuesta para asegurar que todos los campos existen
-      function normalizeInvoiceData(raw: any) {
-        let parsed;
-        try {
-          parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        } catch {
-          return { generalInfo: {}, items: [] };
+          "items": [
+            {
+              "product_ai": "FULL PRODUCT DESCRIPTION FROM DOCUMENT",
+              "item": "SKU CODE",
+              "qty": number,
+              "units": "UOM",
+              "unit_price": number,
+              "amount": number
+            }
+          ]
         }
-        // General Info
-        const g = parsed.generalInfo || {};
-        const generalInfoObj = {
-          vendor_ai: g.vendor_ai || "",
-          invoice_date: g.invoice_date || "",
-          due_date: g.due_date || "",
-          bill_number: g.bill_number || "",
-          terms: g.terms || ""
-        };
-        // Items
-        const items = Array.isArray(parsed.items)
-          ? parsed.items.map((item: any) => ({
-              product_ai: item.product_ai || "",
-              amount: item.amount || ""
-            }))
-          : [];
-        return { generalInfo: generalInfoObj, items };
-      }
-      const normalized = normalizeInvoiceData(response.choices[0].message.content);
-      if (!generalInfo) generalInfo = normalized.generalInfo;
-      allItems = allItems.concat(normalized.items);
-    }
-    return NextResponse.json({ data: { generalInfo: generalInfo || {}, items: allItems } });
-    function normalizeInvoiceData(raw: any) {
-      let parsed;
+      `;
+
       try {
-        parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      } catch {
-        return { generalInfo: {}, items: [] };
+        const result = await model.generateContent([
+          { text: prompt },
+          { inlineData: { data: base64Data, mimeType: mimeType } }
+        ]);
+
+        const response = await result.response;
+        const text = response.text();
+        
+        // Limpiar respuesta de posibles backticks de markdown
+        const cleanJson = text.replace(/```json|```/g, "").trim();
+        const parsedData = JSON.parse(cleanJson);
+        
+        results.push({ data: parsedData });
+
+      } catch (innerErr: any) {
+        console.error("[GEMINI INDIVIDUAL ERROR]:", innerErr);
+        results.push({ error: "Failed to parse this page", detail: innerErr.message });
       }
-      // General Info
-      const g = parsed.generalInfo || {};
-      const generalInfo = {
-        vendor_ai: g.vendor_ai || "",
-        invoice_date: g.invoice_date || "",
-        due_date: g.due_date || "",
-        bill_number: g.bill_number || "",
-        terms: g.terms || ""
-      };
-      // Items
-      const items = Array.isArray(parsed.items)
-        ? parsed.items.map((item: any) => ({
-            product_ai: item.product_ai || "",
-            amount: item.amount || ""
-          }))
-        : [];
-      return { generalInfo, items };
     }
 
-    // Removed unreachable/incorrect code referencing 'response'
-  } catch (err) {
-    console.error('[extract-invoice-ai] OpenAI Vision error:', err);
-    return NextResponse.json({ error: "OpenAI Vision error", details: String(err) }, { status: 500 });
+    return NextResponse.json({ results });
+
+  } catch (err: any) {
+    console.error("[SERVER ERROR]:", err);
+    return NextResponse.json({ error: "Server Error", message: err.message }, { status: 500 });
   }
 }
