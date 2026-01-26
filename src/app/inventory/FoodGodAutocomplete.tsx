@@ -18,7 +18,7 @@ interface Props {
   activeBU?: string | null;
 }
 
-export const FoodGodAutocomplete: React.FC<Props> = ({ onSelect, activeBU }) => {
+export const FoodGodAutocomplete: React.FC<Props> = ({ onSelect, onInputChange, activeBU }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodGodItem[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -104,15 +104,14 @@ export const FoodGodAutocomplete: React.FC<Props> = ({ onSelect, activeBU }) => 
         <input
           ref={inputRef}
           className="w-full border rounded px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-black h-12"
-            className="w-full border rounded px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-black h-10"
           type="text"
           placeholder="Item name..."
           value={query}
           onChange={e => {
             setQuery(e.target.value);
             onSelect(null);
-            if (typeof (props.onInputChange) === 'function') {
-              props.onInputChange(e.target.value);
+            if (typeof onInputChange === 'function') {
+              onInputChange(e.target.value);
             }
           }}
           onFocus={() => setShowDropdown(results.length > 0)}

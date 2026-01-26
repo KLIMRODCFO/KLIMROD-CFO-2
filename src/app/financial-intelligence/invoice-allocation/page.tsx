@@ -60,7 +60,7 @@ export default function InvoiceAllocationPage() {
 			// Combinar todos los items de todas las páginas/imágenes
 			if (data?.results && Array.isArray(data.results)) {
 				// Buscar el primer resultado válido para generalInfo
-				const firstValid = data.results.find(r => r.data && r.data.generalInfo);
+				const firstValid = data.results.find((r: any) => r.data && r.data.generalInfo);
 				if (firstValid) {
 					const extracted = firstValid.data;
 					setGeneralInfo((prev) => ({
@@ -73,12 +73,12 @@ export default function InvoiceAllocationPage() {
 					}));
 				}
 				// Combinar todos los items de todos los resultados válidos
-				const allItems = data.results
-					.filter(r => r.data && Array.isArray(r.data.items))
-					.flatMap(r => r.data.items);
+				   const allItems = data.results
+					   .filter((r: any) => r.data && Array.isArray(r.data.items))
+					   .flatMap((r: any) => r.data.items);
 				setItems(allItems);
 				// Mostrar errores individuales si existen
-				const errors = data.results.filter(r => r.error).map(r => r.error).join(" | ");
+				const errors = data.results.filter((r: any) => r.error).map((r: any) => r.error).join(" | ");
 				if (errors) setExtractError(errors);
 				else setExtractError(null);
 			} else {

@@ -19,7 +19,12 @@ interface Recipe {
 interface Category { id: number; name: string; }
 
 // Filtros de búsqueda
-function Filters({ allRecipes, courseCategories, onFilter }) {
+interface FiltersProps {
+  allRecipes: Recipe[];
+  courseCategories: Category[];
+  onFilter: (filtered: Recipe[]) => void;
+}
+function Filters({ allRecipes, courseCategories, onFilter }: FiltersProps) {
   const [name, setName] = useState("");
   const [course, setCourse] = useState("");
   const [active, setActive] = useState("");

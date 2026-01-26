@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+"use client";
+import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
 import { useActiveBU } from "@/app/ActiveBUContext";
 
@@ -36,8 +37,15 @@ export default function BohDirectory() {
       .select("id, first_name, middle_name, last_name, department_id, position_id, business_unit_id, is_active, pay_type_id, rate, pos_id, department:master_departments(name), position:master_positions(name), pay_type:pay_types(name)")
       .eq("business_unit_id", activeBU)
       .then(({ data }) => {
+        // Asegurarse de que department, position y pay_type sean objetos, no arrays
+        const normalized = (data || []).map((emp: any) => ({
+          ...emp,
+          department: Array.isArray(emp.department) ? emp.department[0] : emp.department,
+          position: Array.isArray(emp.position) ? emp.position[0] : emp.position,
+          pay_type: Array.isArray(emp.pay_type) ? emp.pay_type[0] : emp.pay_type,
+        }));
         // Only BOH department (by name)
-        const filtered = (data || []).filter((emp: Employee) => emp.department?.name === "BOH");
+        const filtered = normalized.filter((emp: Employee) => emp.department?.name === "BOH");
         setEmployees(filtered);
         setLoading(false);
       });
