@@ -127,7 +127,7 @@ function OrderDetailModal({ orderId, onClose, vendors: modalVendors }: { orderId
   const [vendorFilter, setVendorFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [showDetailId, setShowDetailId] = useState<string | null>(null);
+  const [showDetailId, setShowDetailId] = useState<string>("");
 
   useEffect(() => {
     if (!activeBU) return;
@@ -213,8 +213,8 @@ function OrderDetailModal({ orderId, onClose, vendors: modalVendors }: { orderId
           </tbody>
         </table>
       </div>
-      {typeof showDetailId === 'string' && (
-        <OrderDetailModal orderId={showDetailId} onClose={() => setShowDetailId(null)} vendors={vendors} />
+      {showDetailId && (
+        <OrderDetailModal orderId={showDetailId} onClose={() => setShowDetailId("")} vendors={vendors} />
       )}
 
     </div>
