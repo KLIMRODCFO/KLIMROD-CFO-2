@@ -6,6 +6,7 @@ import { useActiveBU } from "../../ActiveBUContext";
 import { supabase } from "../../../../lib/supabaseClient";
 
 const ClosedEventsPage: React.FC = () => {
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { activeBU } = useActiveBU();
   const [filters, setFilters] = useState({
     from: "",
@@ -21,6 +22,10 @@ const ClosedEventsPage: React.FC = () => {
   const [managers, setManagers] = useState<{ id: string; name: string }[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [startDate, setStartDate] = useState<string>("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [securityCode, setSecurityCode] = useState("");
+  const [securityError, setSecurityError] = useState("");
 
   // Fetch filter options y startDate
   useEffect(() => {
@@ -68,6 +73,92 @@ const ClosedEventsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-bg py-8">
+      {/* Security Code Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-white max-w-sm w-full rounded-xl shadow-xl p-8 flex flex-col items-center border border-black" style={{ boxShadow: '0 4px 32px rgba(0,0,0,0.18)' }}>
+            <h2 className="text-2xl font-semibold mb-2 tracking-widest text-black" style={{letterSpacing: '0.15em'}}>DELETE CLOSEOUT</h2>
+            <div className="w-8 h-0.5 bg-black mb-6" />
+            <p className="mb-6 text-center text-black text-base font-light" style={{lineHeight: '1.7'}}>This action is <span className="font-semibold">irreversible</span>.<br/>All records for this closeout will be deleted.<br/>Enter the security code to confirm.</p>
+            <input
+              type="password"
+              className="border-0 border-b-2 border-black bg-transparent px-4 py-2 mb-2 w-full text-center text-black text-lg focus:outline-none focus:border-black placeholder-black/40"
+              placeholder="Security code"
+              value={securityCode}
+              onChange={e => {
+                setSecurityCode(e.target.value);
+                setSecurityError("");
+              }}
+              autoFocus
+              style={{letterSpacing: '0.2em'}}
+            />
+            {securityError && <div className="text-black text-xs mb-2 mt-1 font-medium tracking-wide">{securityError}</div>}
+            <div className="flex gap-4 mt-6 w-full justify-center">
+              <button
+                className="px-6 py-2 rounded-full border border-black bg-white text-black font-semibold tracking-widest transition hover:bg-black hover:text-white focus:outline-none"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteTargetId(null);
+                  setSecurityCode("");
+                  setSecurityError("");
+                }}
+              >Cancel</button>
+              <button
+                className="px-6 py-2 rounded-full border border-black bg-black text-white font-semibold tracking-widest transition hover:bg-white hover:text-black focus:outline-none"
+                onClick={async () => {
+                  if (securityCode !== "1991") {
+                    setSecurityError("Invalid security code.");
+                    return;
+                  }
+                  if (!deleteTargetId) {
+                    setSecurityError("No closeout selected.");
+                    return;
+                  }
+                  // Delete all related closeout_report_employees first
+                  const { error: empError } = await supabase
+                    .from("closeout_report_employees")
+                    .delete()
+                    .eq("report_id", deleteTargetId);
+                  if (empError) {
+                    setSecurityError("Failed to delete employees: " + empError.message);
+                    return;
+                  }
+                  // Delete the closeout_report itself
+                  const { error: reportError } = await supabase
+                    .from("closeout_reports")
+                    .delete()
+                    .eq("id", deleteTargetId);
+                  if (reportError) {
+                    setSecurityError("Failed to delete closeout: " + reportError.message);
+                    return;
+                  }
+                  setShowDeleteModal(false);
+                  setDeleteTargetId(null);
+                  setSecurityCode("");
+                  setSecurityError("");
+                  // Refresh reports
+                  setReports(reports => reports.filter(r => r.id !== deleteTargetId));
+                  setShowSuccessModal(true);
+                }}
+              >Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-white max-w-sm w-full rounded-xl shadow-xl p-8 flex flex-col items-center border border-black" style={{ boxShadow: '0 4px 32px rgba(0,0,0,0.18)' }}>
+            <h2 className="text-2xl font-semibold mb-2 tracking-widest text-black" style={{letterSpacing: '0.15em'}}>SUCCESS</h2>
+            <div className="w-8 h-0.5 bg-black mb-6" />
+            <p className="mb-6 text-center text-black text-base font-light uppercase" style={{lineHeight: '1.7', letterSpacing: '0.1em'}}>CLOSEOUT DELETED SUCCESSFULLY</p>
+            <button
+              className="px-6 py-2 rounded-full border border-black bg-black text-white font-semibold tracking-widest transition hover:bg-white hover:text-black focus:outline-none"
+              onClick={() => setShowSuccessModal(false)}
+            >OK</button>
+          </div>
+        </div>
+      )}
       <h1 className="text-2xl font-bold text-primary text-center mb-8 uppercase tracking-widest">Closed Events</h1>
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-card p-6 mb-8 w-full max-w-6xl mx-auto grid grid-cols-7 gap-4 items-center">
@@ -172,6 +263,13 @@ const ClosedEventsPage: React.FC = () => {
                       window.location.href = `/sales-report/closed-events/edit/${report.id}`;
                     }}
                   >EDIT</button>
+                  <button
+                    className="bg-red-600 text-white px-4 py-1 rounded font-bold text-xs hover:bg-red-800 transition uppercase"
+                    onClick={() => {
+                      setDeleteTargetId(report.id);
+                      setShowDeleteModal(true);
+                    }}
+                  >DELETE</button>
                 </td>
               </tr>
             ))}
