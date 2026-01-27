@@ -230,7 +230,7 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
               positions
             });
           }
-          const safeNum = v => (v === null || v === undefined || v === "") ? 0 : v;
+          const safeNum = (v: any) => (v === null || v === undefined || v === "") ? 0 : v;
           return {
             employee: emp.employee_id,
             employee_name: emp.employee_name,
