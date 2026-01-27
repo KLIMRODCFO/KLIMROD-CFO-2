@@ -213,7 +213,7 @@ function OrderDetailModal({ orderId, onClose, vendors: modalVendors }: { orderId
           </tbody>
         </table>
       </div>
-      {showDetailId && (
+      {typeof showDetailId === 'string' && (
         <OrderDetailModal orderId={showDetailId} onClose={() => setShowDetailId(null)} vendors={vendors} />
       )}
 
