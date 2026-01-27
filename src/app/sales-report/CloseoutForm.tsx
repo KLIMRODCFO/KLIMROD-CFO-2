@@ -471,14 +471,13 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
               type="date"
               value={date}
               onChange={e => {
+                if (mode === "edit") return;
                 const newDate = e.target.value;
                 setDate(newDate);
                 if (newDate) {
-                  // Corregir desfase: crear fecha con zona local y usar getUTCDay()
                   const d = new Date(newDate + 'T12:00:00');
                   const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
                   setDay(days[d.getUTCDay()]);
-                  // Calcular week code usando fecha de apertura del BU
                   if (buOpenDate) {
                     try {
                       setWeekCode(getWeekCode(buOpenDate, newDate));
@@ -492,6 +491,7 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
                 }
               }}
               className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase"
+              disabled={mode === "edit"}
             />
           </div>
           <div>
@@ -506,30 +506,48 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div>
             <div className="text-xs font-bold text-gray-700 mb-1 uppercase">EVENT</div>
-            <select value={event} onChange={e => setEvent(e.target.value)} className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
-              <option value="">SELECT EVENT</option>
-              {events.map(ev => (
-                <option key={ev.id} value={ev.id}>{ev.name.toUpperCase()}</option>
-              ))}
-            </select>
+            {mode === "edit" ? (
+              <span className="w-full block bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
+                {events.find(ev => String(ev.id) === String(event))?.name?.toUpperCase() || ""}
+              </span>
+            ) : (
+              <select value={event} onChange={e => setEvent(e.target.value)} className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
+                <option value="">SELECT EVENT</option>
+                {events.map(ev => (
+                  <option key={ev.id} value={ev.id}>{ev.name.toUpperCase()}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <div className="text-xs font-bold text-gray-700 mb-1 uppercase">SHIFT</div>
-            <select value={shift} onChange={e => setShift(e.target.value)} className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
-              <option value="">SELECT SHIFT</option>
-              {shifts.map(sh => (
-                <option key={sh.id} value={sh.id}>{sh.name.toUpperCase()}</option>
-              ))}
-            </select>
+            {mode === "edit" ? (
+              <span className="w-full block bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
+                {shifts.find(sh => String(sh.id) === String(shift))?.name?.toUpperCase() || ""}
+              </span>
+            ) : (
+              <select value={shift} onChange={e => setShift(e.target.value)} className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
+                <option value="">SELECT SHIFT</option>
+                {shifts.map(sh => (
+                  <option key={sh.id} value={sh.id}>{sh.name.toUpperCase()}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <div className="text-xs font-bold text-gray-700 mb-1 uppercase">MANAGER</div>
-            <select value={manager} onChange={e => setManager(e.target.value)} className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
-              <option value="">SELECT MANAGER</option>
-              {managers.map(m => (
-                <option key={m.id} value={m.id}>{m.name.toUpperCase()}</option>
-              ))}
-            </select>
+            {mode === "edit" ? (
+              <span className="w-full block bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
+                {managers.find(m => String(m.id) === String(manager))?.name?.toUpperCase() || ""}
+              </span>
+            ) : (
+              <select value={manager} onChange={e => setManager(e.target.value)} className="w-full bg-gray-100 rounded-md px-3 py-2 text-sm border border-gray-200 text-gray-700 uppercase">
+                <option value="">SELECT MANAGER</option>
+                {managers.map(m => (
+                  <option key={m.id} value={m.id}>{m.name.toUpperCase()}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
         <div className="w-full mt-6">
