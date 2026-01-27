@@ -119,6 +119,7 @@ function OrderDetailModal({ orderId, onClose, vendors: modalVendors }: { orderId
   );
 // ...existing code...
 
+function OrdersDirectory() {
   const router = useRouter();
   const { activeBU } = useActiveBU();
   const { user } = useUser();
