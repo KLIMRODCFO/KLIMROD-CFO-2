@@ -34,6 +34,37 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
   const [fohActive, setFohActive] = useState<any[]>([]);
   const [fohHistoric, setFohHistoric] = useState<any[]>([]);
   const [fohRaw, setFohRaw] = useState<any>(null);
+  // Nueva lógica: lista de empleados FOH con posición (como en new-closeout)
+  const [employees, setEmployees] = useState<any[]>([]);
+  useEffect(() => {
+    if (!initialData?.business_unit_id) return;
+    const cleanBU = String(initialData.business_unit_id).split(":")[0];
+    supabase
+      .from("master_employees_directory")
+      .select("id, name, position_id, is_active, department_id")
+      .eq("business_unit_id", cleanBU)
+      .in("department_id", [1, 3]) // FOH puede ser 1 o 3
+      .eq("is_active", true)
+      .then(async ({ data }) => {
+        // Debug output: log the query and result
+        if (typeof window !== "undefined") {
+          console.log("[FOH Employee Query] business_unit_id:", cleanBU);
+          console.log("[FOH Employee Query] Result:", data);
+        }
+        if (!data) { setEmployees([]); return; }
+        // Obtener los nombres de las posiciones
+        const positionIds = [...new Set(data.map(e => e.position_id).filter(Boolean))];
+        let positionsMap: Record<string, string> = {};
+        if (positionIds.length > 0) {
+          const { data: posData } = await supabase
+            .from("master_positions")
+            .select("id, name")
+            .in("id", positionIds);
+          positionsMap = Object.fromEntries((posData || []).map(p => [String(p.id), p.name]));
+        }
+        setEmployees(data.map(e => ({ ...e, position: positionsMap[String(e.position_id)] || "" })));
+      });
+  }, [initialData?.business_unit_id]);
   useEffect(() => {
     async function fetchEmployees() {
       if (!initialData?.business_unit_id) return;
@@ -267,21 +298,55 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
         // Update closeout_report_employees
         await supabase.from("closeout_report_employees").delete().eq("report_id", closeoutId);
         const newRows = rows.filter(r => r.employee_name && r.position);
+        // Validar que todos los campos requeridos estén presentes y correctos
+        const requiredFields = [
+          "employee", "employee_name", "position", "position_id",
+          "netSales", "cashSales", "ccSales", "ccGratuity", "cashGratuity", "points"
+        ];
+        for (let i = 0; i < newRows.length; i++) {
+          const r = newRows[i];
+          for (const field of requiredFields) {
+            if (
+              r[field] === undefined ||
+              r[field] === null ||
+              (typeof r[field] === "string" && r[field].trim() === "")
+            ) {
+              setLoading(false);
+              setError(`Fila ${i + 1}: El campo '${field}' está vacío o es inválido.`);
+              return;
+            }
+          }
+        }
         if (newRows.length > 0) {
+          // Calcular totales para distribución de propinas
+          const totalPoints = newRows.reduce((acc, r) => acc + (Number(r.points) || 0), 0);
+          const totalCCGratuity = Number(totals.ccGratuity) || 0;
+          const totalCashGratuity = Number(totals.cashGratuity) || 0;
+          // Limpiar business_unit_id (uuid puro)
+          const cleanBU = initialData?.business_unit_id ? String(initialData.business_unit_id).split(":")[0] : null;
           await supabase.from("closeout_report_employees").insert(
-            newRows.map(r => ({
-              report_id: closeoutId,
-              employee_id: r.employee,
-              employee_name: r.employee_name,
-              position_name: r.position,
-              position_id: r.position_id,
-              net_sales: Number(r.netSales) || 0,
-              cash_sales: Number(r.cashSales) || 0,
-              cc_sales: Number(r.ccSales) || 0,
-              cc_gratuity: Number(r.ccGratuity) || 0,
-              cash_gratuity: Number(r.cashGratuity) || 0,
-              points: Number(r.points) || 0,
-            }))
+            newRows.map(r => {
+              const points = Number(r.points) || 0;
+              const percent = totalPoints > 0 ? (points / totalPoints) : 0;
+              return {
+                report_id: closeoutId,
+                business_unit_id: cleanBU,
+                week_code: weekCode,
+                employee_id: r.employee,
+                employee_name: r.employee_name,
+                position_name: r.position,
+                position_id: r.position_id,
+                net_sales: Number(r.netSales) || 0,
+                cash_sales: Number(r.cashSales) || 0,
+                cc_sales: Number(r.ccSales) || 0,
+                cc_gratuity: Number(r.ccGratuity) || 0,
+                cash_gratuity: Number(r.cashGratuity) || 0,
+                points: points,
+                share_cc_gratuity: percent * totalCCGratuity,
+                share_cash_gratuity: percent * totalCashGratuity,
+                percent: percent * 100,
+              };
+            })
           );
         }
       }
@@ -418,14 +483,14 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
                           value={row.employee || ""}
                           onChange={e => {
                             const empId = e.target.value;
-                            const emp = fohActive.find((emp: any) => emp.id === empId);
+                            const emp = employees.find((emp: any) => String(emp.id) === String(empId));
                             setRows(prev => prev.map((r, i) =>
                               i === idx
                                 ? {
                                     ...r,
                                     employee: emp?.id || "",
                                     employee_name: emp?.name?.toUpperCase() || "",
-                                    position: emp?.position_name?.toUpperCase() || "",
+                                    position: emp?.position?.toUpperCase() || "",
                                     position_id: emp?.position_id || "",
                                   }
                                 : r
@@ -433,13 +498,12 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
                           }}
                         >
                           <option value="">SELECT EMPLOYEE</option>
-                          {fohActive.length > 0 && (
-                            <optgroup label="ALL ACTIVE FOH">
-                              {fohActive.map((emp: any) => (
-                                <option key={emp.id} value={emp.id}>{emp.name?.toUpperCase()}</option>
-                              ))}
-                            </optgroup>
+                          {employees.length === 0 && (
+                            <option value="" disabled>No FOH employees found</option>
                           )}
+                          {employees.map((emp: any) => (
+                            <option key={emp.id} value={emp.id}>{emp.name?.toUpperCase()}</option>
+                          ))}
                         </select>
                       ) : (
                         <span className="uppercase">{row.employee_name}</span>
@@ -456,73 +520,67 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
                     </td>
                     <td className="px-2 py-1 text-right">
                       <input
+                        type="number"
                         className="w-20 border rounded px-2 py-1 text-right bg-gray-50 appearance-none"
-                        style={{ MozAppearance: 'textfield' }}
-                        inputMode="decimal"
-                        pattern="^\\d*(\\.\\d{0,2})?$"
                         value={row.netSales ?? ''}
-                        onChange={e => handleRowChange(idx, "netSales", e.target.value)}
-                        onBlur={e => handleRowChange(idx, "netSales", e.target.value !== '' ? Number(parseFloat(e.target.value).toFixed(2)) : '')}
-                        placeholder="$0.00"
+                        onChange={e => handleRowChange(idx, "netSales", e.target.value === '' ? '' : Number(e.target.value))}
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
                       />
                     </td>
                     <td className="px-2 py-1 text-right">
                       <input
+                        type="number"
                         className="w-20 border rounded px-2 py-1 text-right bg-gray-50 appearance-none"
-                        style={{ MozAppearance: 'textfield' }}
-                        inputMode="decimal"
-                        pattern="^\\d*(\\.\\d{0,2})?$"
                         value={row.cashSales ?? ''}
-                        onChange={e => handleRowChange(idx, "cashSales", e.target.value)}
-                        onBlur={e => handleRowChange(idx, "cashSales", e.target.value !== '' ? Number(parseFloat(e.target.value).toFixed(2)) : '')}
-                        placeholder="$0.00"
+                        onChange={e => handleRowChange(idx, "cashSales", e.target.value === '' ? '' : Number(e.target.value))}
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
                       />
                     </td>
                     <td className="px-2 py-1 text-right">
                       <input
+                        type="number"
                         className="w-20 border rounded px-2 py-1 text-right bg-gray-50 appearance-none"
-                        style={{ MozAppearance: 'textfield' }}
-                        inputMode="decimal"
-                        pattern="^\\d*(\\.\\d{0,2})?$"
                         value={row.ccSales ?? ''}
-                        onChange={e => handleRowChange(idx, "ccSales", e.target.value)}
-                        onBlur={e => handleRowChange(idx, "ccSales", e.target.value !== '' ? Number(parseFloat(e.target.value).toFixed(2)) : '')}
-                        placeholder="$0.00"
+                        onChange={e => handleRowChange(idx, "ccSales", e.target.value === '' ? '' : Number(e.target.value))}
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
                       />
                     </td>
                     <td className="px-2 py-1 text-right">
                       <input
+                        type="number"
                         className="w-20 border rounded px-2 py-1 text-right bg-gray-50 appearance-none"
-                        style={{ MozAppearance: 'textfield' }}
-                        inputMode="decimal"
-                        pattern="^\\d*(\\.\\d{0,2})?$"
                         value={row.ccGratuity ?? ''}
-                        onChange={e => handleRowChange(idx, "ccGratuity", e.target.value)}
-                        onBlur={e => handleRowChange(idx, "ccGratuity", e.target.value !== '' ? Number(parseFloat(e.target.value).toFixed(2)) : '')}
-                        placeholder="$0.00"
+                        onChange={e => handleRowChange(idx, "ccGratuity", e.target.value === '' ? '' : Number(e.target.value))}
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
                       />
                     </td>
                     <td className="px-2 py-1 text-right">
                       <input
+                        type="number"
                         className="w-20 border rounded px-2 py-1 text-right bg-gray-50 appearance-none"
-                        style={{ MozAppearance: 'textfield' }}
-                        inputMode="decimal"
-                        pattern="^\\d*(\\.\\d{0,2})?$"
                         value={row.cashGratuity ?? ''}
-                        onChange={e => handleRowChange(idx, "cashGratuity", e.target.value)}
-                        onBlur={e => handleRowChange(idx, "cashGratuity", e.target.value !== '' ? Number(parseFloat(e.target.value).toFixed(2)) : '')}
-                        placeholder="$0.00"
+                        onChange={e => handleRowChange(idx, "cashGratuity", e.target.value === '' ? '' : Number(e.target.value))}
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
                       />
                     </td>
                     <td className="px-2 py-1 text-right">
                       <input
+                        type="number"
                         className="w-16 border rounded px-2 py-1 text-right bg-gray-50 appearance-none"
-                        style={{ MozAppearance: 'textfield' }}
-                        inputMode="decimal"
-                        pattern="^\\d*(\\.\\d{0,2})?$"
                         value={row.points ?? ''}
-                        onChange={e => handleRowChange(idx, "points", e.target.value)}
-                        onBlur={e => handleRowChange(idx, "points", e.target.value !== '' ? Number(parseFloat(e.target.value).toFixed(2)) : '')}
+                        onChange={e => handleRowChange(idx, "points", e.target.value === '' ? '' : Number(e.target.value))}
+                        step="0.01"
+                        min="0"
                         placeholder="0"
                       />
                     </td>
