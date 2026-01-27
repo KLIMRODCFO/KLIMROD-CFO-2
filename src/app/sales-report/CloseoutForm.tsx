@@ -1,8 +1,9 @@
-
 "use client";
 import React, { useState, useEffect } from "react";
 import { supabase } from "lib/supabaseClient";
 import { getWeekCode } from "../../../utils/getWeekCode";
+
+
 
 interface CloseoutFormProps {
   mode: "create" | "edit";
@@ -30,6 +31,16 @@ function formatNumber(val: any) {
 }
 
 export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, closeoutId, employeeRows = [], onSaved }) => {
+    // Cargar todas las posiciones al inicio
+    const [positions, setPositions] = useState<any[]>([]);
+    useEffect(() => {
+      supabase
+        .from("master_positions")
+        .select("id, name")
+        .then(({ data }) => {
+          setPositions(data || []);
+        });
+    }, []);
   // FOH employees para dropdown: activos e históricos separados
   const [fohActive, setFohActive] = useState<any[]>([]);
   const [fohHistoric, setFohHistoric] = useState<any[]>([]);
@@ -75,7 +86,7 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
       // 1. FOH activos (todos los actuales)
       const res = await supabase
         .from("master_employees_directory")
-        .select("id, name, position_name, position_id, is_active, department_id")
+        .select("id, name, position_id, is_active, department_id")
         .eq("business_unit_id", cleanBU);
       active = res.data || [];
       activeError = res.error;
@@ -83,7 +94,7 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
       if ((!active || active.length === 0) && !activeError) {
         const res2 = await supabase
           .from("master_employees_directory")
-          .select("id, name, position_name, position_id, is_active, department_id");
+          .select("id, name, position_id, is_active, department_id");
         active = res2.data || [];
         activeError = res2.error;
       }
@@ -156,21 +167,84 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
   });
 
   // Employees/rows: solo los que trabajaron el evento
+  if (typeof window !== "undefined" && mode === "edit" && employeeRows && employeeRows.length > 0) {
+    console.log("[DEBUG] employeeRows on edit load:", employeeRows);
+  }
   const [rows, setRows] = useState<any[]>(
     mode === "edit" && employeeRows && employeeRows.length > 0
-      ? employeeRows.map(emp => ({
-          employee: emp.employee_id,
-          employee_name: emp.employee_name,
-          position: emp.position_name ? emp.position_name.toUpperCase() : "",
-          position_id: emp.position_id,
-          netSales: emp.net_sales,
-          cashSales: emp.cash_sales,
-          ccSales: emp.cc_sales,
-          ccGratuity: emp.cc_gratuity,
-          cashGratuity: emp.cash_gratuity,
-          points: emp.points,
-          isNew: false,
-        }))
+      ? employeeRows.map(emp => {
+          let position_id = emp.position_id;
+          let foundActive, foundOrig, foundHistoric, foundByName, foundHistoric2;
+          if (!position_id) {
+            foundActive = employees.find(e => String(e.id) === String(emp.employee_id));
+            if (foundActive && foundActive.position_id) position_id = foundActive.position_id;
+          }
+          if (!position_id && Array.isArray(employeeRows)) {
+            foundOrig = employeeRows.find(e => String(e.employee_id) === String(emp.employee_id) && e.position_id);
+            if (foundOrig) position_id = foundOrig.position_id;
+          }
+          if (!position_id && Array.isArray(fohHistoric)) {
+            foundHistoric = fohHistoric.find(e => String(e.id) === String(emp.employee_id));
+            if (foundHistoric && foundHistoric.position_id) position_id = foundHistoric.position_id;
+          }
+          if (!position_id) {
+            foundByName = employees.find(e =>
+              (e.name?.toUpperCase?.() === emp.employee_name?.toUpperCase?.()) &&
+              (e.position?.toUpperCase?.() === emp.position_name?.toUpperCase?.())
+            );
+            if (foundByName) position_id = foundByName.position_id;
+            if (!position_id && Array.isArray(fohHistoric)) {
+              foundHistoric2 = fohHistoric.find(e =>
+                (e.name?.toUpperCase?.() === emp.employee_name?.toUpperCase?.()) &&
+                (e.position_name?.toUpperCase?.() === emp.position_name?.toUpperCase?.())
+              );
+              if (foundHistoric2) position_id = foundHistoric2.position_id;
+            }
+          }
+          // NUEVO: buscar en master_positions por nombre si sigue vacío
+          if (!position_id && emp.position_name && Array.isArray(positions)) {
+            // Log para depuración de búsqueda en positions
+            // eslint-disable-next-line no-console
+            console.debug('[DEBUG][positions lookup]', {
+              buscando: emp.position_name,
+              positions,
+            });
+            const foundPos = positions.find(p => p.name?.toUpperCase?.() === emp.position_name?.toUpperCase?.());
+            if (foundPos) position_id = foundPos.id;
+          }
+          if (!position_id) {
+            // Log detallado para depuración
+            // eslint-disable-next-line no-console
+            console.debug('[DEBUG][position_id vacío]', {
+              employee_id: emp.employee_id,
+              employee_name: emp.employee_name,
+              position: emp.position_name,
+              foundActive,
+              foundOrig,
+              foundHistoric,
+              foundByName,
+              foundHistoric2,
+              employees,
+              fohHistoric,
+              employeeRows,
+              positions
+            });
+          }
+          const safeNum = v => (v === null || v === undefined || v === "") ? 0 : v;
+          return {
+            employee: emp.employee_id,
+            employee_name: emp.employee_name,
+            position: emp.position_name ? emp.position_name.toUpperCase() : "",
+            position_id: position_id ?? "",
+            netSales: safeNum(emp.net_sales),
+            cashSales: safeNum(emp.cash_sales),
+            ccSales: safeNum(emp.cc_sales),
+            ccGratuity: safeNum(emp.cc_gratuity),
+            cashGratuity: safeNum(emp.cash_gratuity),
+            points: safeNum(emp.points),
+            isNew: false,
+          };
+        })
       : []
   );
 
@@ -297,19 +371,28 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
         await supabase.from("closeout_reports").update(payload).eq("id", closeoutId);
         // Update closeout_report_employees
         await supabase.from("closeout_report_employees").delete().eq("report_id", closeoutId);
-        const newRows = rows.filter(r => r.employee_name && r.position);
+        // Usar todos los empleados visibles en la tabla
+        const allRows = rows;
+        if (typeof window !== "undefined") {
+          console.log("[DEBUG] allRows before insert:", allRows);
+          allRows.forEach((r, idx) => {
+            console.log(`[DEBUG] Empleado fila ${idx + 1}: employee_id=${r.employee}, position_id=${r.position_id}, employee_name=${r.employee_name}, position=${r.position}`);
+          });
+        }
         // Validar que todos los campos requeridos estén presentes y correctos
         const requiredFields = [
-          "employee", "employee_name", "position", "position_id",
+          "employee", "employee_name", "position",
           "netSales", "cashSales", "ccSales", "ccGratuity", "cashGratuity", "points"
         ];
-        for (let i = 0; i < newRows.length; i++) {
-          const r = newRows[i];
+        for (let i = 0; i < allRows.length; i++) {
+          const r = allRows[i];
           for (const field of requiredFields) {
+            // Permitir 0 como valor válido para los campos numéricos
+            const isNumeric = ["netSales","cashSales","ccSales","ccGratuity","cashGratuity","points"].includes(field);
             if (
               r[field] === undefined ||
               r[field] === null ||
-              (typeof r[field] === "string" && r[field].trim() === "")
+              (!isNumeric && typeof r[field] === "string" && r[field].trim() === "")
             ) {
               setLoading(false);
               setError(`Fila ${i + 1}: El campo '${field}' está vacío o es inválido.`);
@@ -317,37 +400,52 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
             }
           }
         }
-        if (newRows.length > 0) {
+        if (allRows.length > 0) {
           // Calcular totales para distribución de propinas
-          const totalPoints = newRows.reduce((acc, r) => acc + (Number(r.points) || 0), 0);
+          const totalPoints = allRows.reduce((acc, r) => acc + (Number(r.points) || 0), 0);
           const totalCCGratuity = Number(totals.ccGratuity) || 0;
           const totalCashGratuity = Number(totals.cashGratuity) || 0;
           // Limpiar business_unit_id (uuid puro)
           const cleanBU = initialData?.business_unit_id ? String(initialData.business_unit_id).split(":")[0] : null;
-          await supabase.from("closeout_report_employees").insert(
-            newRows.map(r => {
-              const points = Number(r.points) || 0;
-              const percent = totalPoints > 0 ? (points / totalPoints) : 0;
-              return {
-                report_id: closeoutId,
-                business_unit_id: cleanBU,
-                week_code: weekCode,
-                employee_id: r.employee,
-                employee_name: r.employee_name,
-                position_name: r.position,
-                position_id: r.position_id,
-                net_sales: Number(r.netSales) || 0,
-                cash_sales: Number(r.cashSales) || 0,
-                cc_sales: Number(r.ccSales) || 0,
-                cc_gratuity: Number(r.ccGratuity) || 0,
-                cash_gratuity: Number(r.cashGratuity) || 0,
-                points: points,
-                share_cc_gratuity: percent * totalCCGratuity,
-                share_cash_gratuity: percent * totalCashGratuity,
-                percent: percent * 100,
-              };
-            })
-          );
+          const insertRows = allRows.map(r => {
+            const points = r.points === "" ? 0 : Number(r.points);
+            const netSales = r.netSales === "" ? 0 : Number(r.netSales);
+            const cashSales = r.cashSales === "" ? 0 : Number(r.cashSales);
+            const ccSales = r.ccSales === "" ? 0 : Number(r.ccSales);
+            const ccGratuity = r.ccGratuity === "" ? 0 : Number(r.ccGratuity);
+            const cashGratuity = r.cashGratuity === "" ? 0 : Number(r.cashGratuity);
+            const percent = totalPoints > 0 ? (points / totalPoints) : 0;
+            return {
+              report_id: closeoutId,
+              business_unit_id: cleanBU,
+              week_code: weekCode,
+              employee_id: r.employee,
+              employee_name: r.employee_name,
+              // position_id: r.position_id, // Ya no se envía
+              position_name: r.position,
+              net_sales: netSales,
+              cash_sales: cashSales,
+              cc_sales: ccSales,
+              cc_gratuity: ccGratuity,
+              cash_gratuity: cashGratuity,
+              points: points,
+              share_cc_gratuity: totalPoints && totalCCGratuity ? (totalCCGratuity * points / totalPoints) : 0,
+              share_cash_gratuity: totalPoints && totalCashGratuity ? (totalCashGratuity * points / totalPoints) : 0,
+              percent: totalPoints ? (100 * points / totalPoints) : 0,
+            };
+          });
+          if (typeof window !== "undefined") {
+            console.log("[DEBUG] closeout_report_employees insertRows:", insertRows);
+          }
+          const { error: insertError, data: insertData } = await supabase.from("closeout_report_employees").insert(insertRows);
+          if (typeof window !== "undefined") {
+            if (insertError) {
+              console.error("[DEBUG] closeout_report_employees insert error:", insertError);
+              alert("Error al guardar empleados: " + insertError.message);
+            } else {
+              console.log("[DEBUG] closeout_report_employees insert success:", insertData);
+            }
+          }
         }
       }
       setSuccess(true);
@@ -658,21 +756,14 @@ export const CloseoutForm: React.FC<CloseoutFormProps> = ({ mode, initialData, c
           </div>
         </div>
       </div>
-      {/* Debug info: BU y FOH activos */}
-      <div className="text-xs text-gray-500 text-center mt-2">
-        <div>BU ID original: <span className="font-mono">{initialData?.business_unit_id || "(none)"}</span></div>
-        <div>BU ID limpio usado: <span className="font-mono">{String(initialData?.business_unit_id).split(":")[0]}</span></div>
-        <div>FOH activos encontrados: <span className="font-mono">{fohActive.length}</span></div>
-        <div className="mt-2 text-left max-w-2xl mx-auto break-all">
-          <b>FOH RAW DATA:</b>
-          <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto" style={{maxHeight:200}}>{JSON.stringify(fohRaw, null, 2)}</pre>
-        </div>
-      </div>
+      {/* Mensajes de error y éxito */}
       {error && <div className="text-red-600 font-bold text-center">{error}</div>}
       {success && <div className="text-green-600 font-bold text-center">Guardado correctamente.</div>}
-      <button type="submit" className="w-full py-2 rounded bg-black text-white font-bold hover:bg-neutral-800 transition-colors mt-4" disabled={loading}>
-        {loading ? "Guardando..." : mode === "edit" ? "GUARDAR CAMBIOS" : "CREAR CLOSEOUT"}
-      </button>
+      <div className="flex justify-center mt-4">
+        <button type="submit" className="px-6 py-1.5 rounded bg-black text-white font-bold text-sm hover:bg-neutral-800 transition-colors" style={{minWidth:140}} disabled={loading}>
+          {loading ? "Saving..." : mode === "edit" ? "SAVE CHANGES" : "CREAR CLOSEOUT"}
+        </button>
+      </div>
     </form>
   );
 };

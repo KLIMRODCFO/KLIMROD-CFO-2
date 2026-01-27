@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "lib/supabaseClient";
 import { CloseoutForm } from "@/app/sales-report/CloseoutForm";
 
 const EditClosedEventPage = () => {
   const params = useParams();
+  const router = useRouter();
   const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +44,7 @@ const EditClosedEventPage = () => {
       initialData={initialData}
       employeeRows={employeeRows}
       closeoutId={id}
+      onSaved={() => router.push("/sales-report/closed-events")}
     />
   );
 };
