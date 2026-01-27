@@ -1,3 +1,52 @@
+/* Solo imprimir el modal de orden, ocultar el resto */
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+  body * {
+    visibility: hidden !important;
+    box-shadow: none !important;
+  }
+  .print-order-modal, .print-order-modal * {
+    visibility: visible !important;
+    box-shadow: none !important;
+  }
+  .print-order-modal {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    min-height: 100vh !important;
+    background: white !important;
+    z-index: 99999 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+  /* Eliminar encabezado y pie de Next.js/localhost */
+  header, footer, .next-error-h1, .next-error {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  @page {
+    margin: 0;
+    size: auto;
+  }
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -19,7 +19,11 @@ interface Props {
 }
 
 export const FoodGodAutocomplete: React.FC<Props> = ({ onSelect, onInputChange, activeBU }) => {
-  const [query, setQuery] = useState("");
+  // query is controlled by parent via onInputChange, so accept value as prop
+  const [internalQuery, setInternalQuery] = useState("");
+
+  // Use prop for value if provided
+  const query = typeof onInputChange === 'undefined' ? internalQuery : undefined;
   const [results, setResults] = useState<FoodGodItem[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIdx, setHighlightedIdx] = useState<number>(-1);
@@ -27,7 +31,7 @@ export const FoodGodAutocomplete: React.FC<Props> = ({ onSelect, onInputChange, 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (query.length < 2 || !activeBU) {
+    if ((query ?? "").length < 2 || !activeBU) {
       setResults([]);
       setShowDropdown(false);
       return;
@@ -61,7 +65,7 @@ export const FoodGodAutocomplete: React.FC<Props> = ({ onSelect, onInputChange, 
   }, [query, activeBU]);
 
   const handleSelect = (item: any) => {
-    setQuery(item.item_name);
+    setInternalQuery(item.item_name);
     setShowDropdown(false);
     setHighlightedIdx(-1);
     onSelect(item);
@@ -106,25 +110,30 @@ export const FoodGodAutocomplete: React.FC<Props> = ({ onSelect, onInputChange, 
           className="w-full border rounded px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-black h-12"
           type="text"
           placeholder="Item name..."
-          value={query}
+          value={typeof onInputChange === 'function' ? undefined : internalQuery}
+          defaultValue={typeof onInputChange === 'function' ? undefined : undefined}
           onChange={e => {
-            setQuery(e.target.value);
-            onSelect(null);
             if (typeof onInputChange === 'function') {
+              onSelect(null);
               onInputChange(e.target.value);
+            } else {
+              setInternalQuery(e.target.value);
+              onSelect(null);
             }
           }}
           onFocus={() => setShowDropdown(results.length > 0)}
           onBlur={() => {
             setShowDropdown(false);
-            // Si el valor escrito no es exactamente uno de los item_name válidos, limpia el campo
-            const match = results.find(r => r.item_name.toLowerCase() === query.trim().toLowerCase());
-            if (!match) {
-              setQuery("");
-              onSelect(null);
-            } else {
-              // Si el valor coincide, fuerza la selección
+            const val = typeof onInputChange === 'function' ? inputRef.current?.value || "" : internalQuery;
+            const match = results.find(r => r.item_name.toLowerCase() === val.trim().toLowerCase());
+            if (match) {
               handleSelect(match);
+            } else {
+              if (typeof onInputChange === 'function') {
+                onInputChange(val);
+              } else {
+                setInternalQuery(val);
+              }
             }
           }}
           onKeyDown={handleKeyDown}

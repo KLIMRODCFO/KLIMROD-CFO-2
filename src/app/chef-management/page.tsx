@@ -15,6 +15,7 @@ import RecipesTab from "./recipes/RecipesTab";
 import RecipesDirectory from "./recipes/directory";
 import BohDirectory from "./boh-directory/page";
 import FoodOrdersTable from "./food-orders/FoodOrdersTable";
+import OrdersDirectory from "./orders-directory/page";
 
 const tabContent: Record<string, React.ReactNode> = {
   recipes: <RecipesTab />,
@@ -23,6 +24,7 @@ const tabContent: Record<string, React.ReactNode> = {
   inventory: <Placeholder label="FOOD INVENTORY" />,
   "ingredient-costs": <Placeholder label="INGREDIENT COSTS" />,
   "food-orders": <FoodOrdersTable />,
+  "orders-directory": <OrdersDirectory />,
   "boh-directory": <BohDirectory />,
   "boh-payroll": <Placeholder label="BOH PAYROLL" />,
 };

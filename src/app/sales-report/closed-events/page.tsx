@@ -164,8 +164,14 @@ const ClosedEventsPage: React.FC = () => {
                 <td className="px-2 py-2">{Number(report.totals_cc_gratuity).toLocaleString("en-US", { style: "currency", currency: "USD" })}</td>
                 <td className="px-2 py-2">{Number(report.totals_cash_gratuity).toLocaleString("en-US", { style: "currency", currency: "USD" })}</td>
                 <td className="px-2 py-2">{report.totals_points}</td>
-                <td className="px-2 py-2">
-                  <button className="bg-black text-white px-4 py-1 rounded font-bold text-xs hover:bg-gray-800 transition">View/Edit</button>
+                <td className="px-2 py-2 flex gap-2 justify-center">
+                  <button className="bg-black text-white px-4 py-1 rounded font-bold text-xs hover:bg-gray-800 transition uppercase">VIEW</button>
+                  <button
+                    className="bg-black text-white px-4 py-1 rounded font-bold text-xs hover:bg-gray-800 transition uppercase"
+                    onClick={() => {
+                      window.location.href = `/sales-report/closed-events/edit/${report.id}`;
+                    }}
+                  >EDIT</button>
                 </td>
               </tr>
             ))}
