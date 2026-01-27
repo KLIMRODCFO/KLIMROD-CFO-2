@@ -1,15 +1,21 @@
+
 "use client";
-import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function OrderDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("id");
-  const [order, setOrder] = useState(null);
-  const [items, setItems] = useState([]);
-  const [vendor, setVendor] = useState(null);
+
+  type Vendor = { vendor_dba: string };
+  type Order = { vendor_id: string; order_date: string; week_code: string };
+  type OrderItem = { category: string; item_name: string; variety: string; uom: string; qty: string; notes: string };
+
+  const [order, setOrder] = useState<Order | null>(null);
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,7 +26,7 @@ export default function OrderDetailPage() {
       .select("*, vendor_id")
       .eq("id", orderId)
       .single()
-      .then(({ data }) => {
+      .then(({ data }: { data: any }) => {
         setOrder(data);
         if (data?.vendor_id) {
           supabase
@@ -28,14 +34,14 @@ export default function OrderDetailPage() {
             .select("vendor_dba")
             .eq("id", data.vendor_id)
             .single()
-            .then(({ data: v }) => setVendor(v));
+            .then(({ data: v }: { data: any }) => setVendor(v));
         }
       });
     supabase
       .from("master_orders_food_supplies_items")
       .select("category, item_name, variety, uom, qty, notes")
       .eq("order_id", orderId)
-      .then(({ data }) => setItems(data || []));
+      .then(({ data }: { data: any }) => setItems(data || []));
     setLoading(false);
   }, [orderId]);
 

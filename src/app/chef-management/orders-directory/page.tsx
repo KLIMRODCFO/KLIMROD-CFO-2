@@ -1,15 +1,41 @@
 
 "use client";
 import React, { useEffect, useState } from "react";
+
+type Vendor = {
+  id: string;
+  vendor_dba: string;
+  bu_id: string;
+};
+
+type Order = {
+  id: string;
+  order_date: string;
+  week_code: string;
+  vendor_id: string;
+  bu_id: string;
+  user_id: string;
+  created_at: string;
+  status: string;
+};
+
+type OrderItem = {
+  category: string;
+  item_name: string;
+  variety: string;
+  uom: string;
+  qty: string;
+  notes: string;
+};
 import { supabase } from "../../../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useActiveBU } from "../../ActiveBUContext";
 import { useUser } from "../../UserContext";
 
-function OrderDetailModal({ orderId, onClose, vendors }) {
-  const [order, setOrder] = useState(null);
-  const [items, setItems] = useState([]);
-  const [vendor, setVendor] = useState(null);
+function OrderDetailModal({ orderId, onClose, vendors: modalVendors }: { orderId: string, onClose: () => void, vendors: Vendor[] }) {
+  const [order, setOrder] = useState<Order | null>(null);
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,8 +49,8 @@ function OrderDetailModal({ orderId, onClose, vendors }) {
       .then(({ data }) => {
         setOrder(data);
         if (data?.vendor_id) {
-          const v = vendors.find(v => v.id === data.vendor_id);
-          setVendor(v);
+          const v = modalVendors.find(v => v.id === data.vendor_id);
+          setVendor(v || null);
         }
       });
     supabase
@@ -33,7 +59,7 @@ function OrderDetailModal({ orderId, onClose, vendors }) {
       .eq("order_id", orderId)
       .then(({ data }) => setItems(data || []));
     setLoading(false);
-  }, [orderId, vendors]);
+  }, [orderId, modalVendors]);
 
   if (!orderId) return null;
   return (
@@ -91,18 +117,17 @@ function OrderDetailModal({ orderId, onClose, vendors }) {
       </div>
     </div>
   );
-}
+// ...existing code...
 
-export default function OrdersDirectory() {
   const router = useRouter();
   const { activeBU } = useActiveBU();
   const { user } = useUser();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  // const [loading, setLoading] = useState(false); // Removed duplicate declaration
   const [vendorFilter, setVendorFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [vendors, setVendors] = useState([]);
-  const [showDetailId, setShowDetailId] = useState(null);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [showDetailId, setShowDetailId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeBU) return;
@@ -191,6 +216,9 @@ export default function OrdersDirectory() {
       {showDetailId && (
         <OrderDetailModal orderId={showDetailId} onClose={() => setShowDetailId(null)} vendors={vendors} />
       )}
+
     </div>
   );
 }
+
+export default OrdersDirectory;
