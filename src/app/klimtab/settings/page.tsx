@@ -1,4 +1,6 @@
 "use client";
+import React, { useEffect, useState } from "react";
+import { supabase } from "../../../../lib/supabaseClient";
 // Capitalize first letter, rest lowercase (for display)
 function formatDisplayName(str: string) {
   if (!str) return '';
@@ -6,8 +8,6 @@ function formatDisplayName(str: string) {
     .toLowerCase()
     .replace(/\b\w/g, c => c.toUpperCase());
 }
-import React, { useEffect, useState } from "react";
-import { supabase } from "../../../../lib/supabaseClient";
 
 // Utilidad para generar code automático a partir del nombre
 function generateCode(name: string) {
