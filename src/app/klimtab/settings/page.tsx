@@ -1,4 +1,5 @@
 "use client";
+
 // Capitalize first letter, rest lowercase (for display)
 function formatDisplayName(str: string) {
   if (!str) return '';
