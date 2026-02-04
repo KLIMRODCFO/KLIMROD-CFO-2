@@ -7,8 +7,8 @@ import { supabase } from "../../../../lib/supabaseClient";
 const FoodMenuPage: React.FC = () => {
   const { activeBU } = useActiveBU();
   const { user } = useUser();
-  const [categories, setCategories] = useState([]);
-  const [recipes, setRecipes] = useState([]);
+  const [categories, setCategories] = useState<Array<{ id: any; name: any }>>([]);
+  const [recipes, setRecipes] = useState<Array<{ id: any; name: any }>>([]);
   const [menuItems, setMenuItems] = useState([]);
   const [form, setForm] = useState({
     name: "",
