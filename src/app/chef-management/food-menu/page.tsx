@@ -9,7 +9,7 @@ const FoodMenuPage: React.FC = () => {
   const { user } = useUser();
   const [categories, setCategories] = useState<Array<{ id: any; name: any }>>([]);
   const [recipes, setRecipes] = useState<Array<{ id: any; name: any }>>([]);
-  const [menuItems, setMenuItems] = useState([]);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
   const [form, setForm] = useState({
     name: "",
     price: "",
