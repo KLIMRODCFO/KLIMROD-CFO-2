@@ -21,6 +21,28 @@ const Sidebar = () => {
       <div>
         <nav className="mt-6">
           <ul className="space-y-1">
+            {/* KLIMTAB main module and submodules (just below ROLE MANAGEMENT) */}
+            {allowedModules.includes('KLIMTAB') && (
+              <li>
+                <button type="button" className="w-full text-left px-4 py-2 hover:bg-gray-800 flex justify-between items-center" onClick={() => toggleMenu('KLIMTAB')}>
+                  KLIMTAB
+                  <span>{openMenus['KLIMTAB'] ? '▲' : '▼'}</span>
+                </button>
+                {openMenus['KLIMTAB'] && (
+                  <ul className="ml-4 space-y-1 text-sm">
+                    {allowedModules.includes('KLIMTAB EMPLOYEE ACCESS') && (
+                      <li><Link href="/klimtab/employee-access" className="block px-2 py-1 hover:bg-gray-700 cursor-pointer">KLIMTAB EMPLOYEE ACCESS</Link></li>
+                    )}
+                    {allowedModules.includes('KLIMTAB SETTINGS') && (
+                      <li><Link href="/klimtab/settings" className="block px-2 py-1 hover:bg-gray-700 cursor-pointer">KLIMTAB SETTINGS</Link></li>
+                    )}
+                    {allowedModules.includes('KLIMTAB SECURITY CENTER') && (
+                      <li><Link href="/klimtab/security-center" className="block px-2 py-1 hover:bg-gray-700 cursor-pointer">KLIMTAB SECURITY CENTER</Link></li>
+                    )}
+                  </ul>
+                )}
+              </li>
+            )}
             {allowedModules.includes('MATRIX') && (
               <li>
                 <Link href="/matrix" className="block px-4 py-2 hover:bg-gray-800 cursor-pointer">MATRIX</Link>

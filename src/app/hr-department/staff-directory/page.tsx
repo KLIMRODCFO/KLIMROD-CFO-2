@@ -8,6 +8,7 @@ interface Employee {
   first_name: string;
   middle_name: string | null;
   last_name: string;
+  email?: string | null;
   department_id: number;
   position_id: number;
   business_unit_id: number;
@@ -44,6 +45,7 @@ export default function StaffDirectoryPage() {
   const [editPosition, setEditPosition] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [editPosId, setEditPosId] = useState<string>("");
+  const [editEmail, setEditEmail] = useState<string>("");
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -86,6 +88,7 @@ export default function StaffDirectoryPage() {
     setEditPayType(emp.pay_type_id ?? null);
     setEditRate(emp.rate ?? "");
     setEditPosId(emp.pos_id ?? "");
+    setEditEmail(emp.email ?? "");
   };
 
   const handleSave = async (id: number) => {
@@ -95,7 +98,8 @@ export default function StaffDirectoryPage() {
       position_id: editPosition,
       pay_type_id: editPayType,
       rate: editRate,
-      pos_id: editPosId
+      pos_id: editPosId,
+      email: editEmail
     }).eq("id", id);
     // Refetch para obtener los datos actualizados de la relación
     let query = supabase
@@ -148,6 +152,7 @@ export default function StaffDirectoryPage() {
                 <th className="px-3 py-3">ID</th>
                 <th className="px-3 py-3">POS ID</th>
                 <th className="px-3 py-3">NAME</th>
+                <th className="px-3 py-3">EMAIL</th>
                 <th className="px-3 py-3">DEPARTMENT</th>
                 <th className="px-3 py-3">POSITION</th>
                 <th className="px-3 py-3">PAY TYPE</th>
@@ -178,6 +183,19 @@ export default function StaffDirectoryPage() {
                     <td className="px-3 py-3 text-gray-900">{emp.pos_id || ''}</td>
                   )}
                   <td className="px-3 py-3 font-semibold text-black whitespace-nowrap">{emp.first_name} {emp.middle_name || ""} {emp.last_name}</td>
+                  {editingId === emp.id ? (
+                    <td className="px-3 py-3">
+                      <input
+                        className="w-full border border-gray-400 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 min-w-[120px]"
+                        type="email"
+                        value={editEmail}
+                        onChange={e => setEditEmail(e.target.value)}
+                        placeholder="Email..."
+                      />
+                    </td>
+                  ) : (
+                    <td className="px-3 py-3 text-gray-900">{emp.email || ''}</td>
+                  )}
                   <td className="px-3 py-3 text-gray-800">
                     {editingId === emp.id ? (
                       <select className="border rounded px-2 py-1" value={editDepartment ?? ''} onChange={e => setEditDepartment(Number(e.target.value))}>

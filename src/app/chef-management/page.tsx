@@ -16,11 +16,12 @@ import RecipesDirectory from "./recipes/directory";
 import BohDirectory from "./boh-directory/page";
 import FoodOrdersTable from "./food-orders/FoodOrdersTable";
 import OrdersDirectory from "./orders-directory/page";
+import FoodMenuPage from "./food-menu/page";
 
 const tabContent: Record<string, React.ReactNode> = {
   recipes: <RecipesTab />,
   "recipes-directory": <RecipesDirectory />,
-  "food-menu": <Placeholder label="FOOD MENU" />,
+  "food-menu": <FoodMenuPage />,
   inventory: <Placeholder label="FOOD INVENTORY" />,
   "ingredient-costs": <Placeholder label="INGREDIENT COSTS" />,
   "food-orders": <FoodOrdersTable />,
