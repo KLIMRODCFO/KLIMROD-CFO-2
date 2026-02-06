@@ -1,0 +1,23 @@
+TODOs para mañana (basado en el contexto y soluciones de hoy):
+
+1. Arreglar el campo de password en Security Setting de Klimtab:
+   - El input de contraseña se sobrescribe porque el canal de Supabase dispara fetchAll y actualiza el estado constantemente.
+   - Solución propuesta: Usar un botón "Edit" para activar la edición por fila, y solo permitir la edición cuando el usuario lo decida. Así, el input no se sobrescribe mientras se edita.
+   - Revisar que el estado de edición (isEditingRow) funcione correctamente y que el input solo sea editable en modo edición.
+   - Verificar que no haya otros efectos secundarios que actualicen el estado de passwords mientras se edita.
+
+2. Arreglar las asignaciones de módulos y submódulos de Klimtab en las asignaciones a empleados:
+   - Actualmente, los módulos y submódulos no están bien relacionados en la tabla de accesos actuales (por ejemplo, "Chef Management" aparece con "Quick Onboarding").
+   - Solución propuesta: Asegurarse de que los joins entre app, módulo y submódulo sean correctos usando los IDs y no solo los nombres.
+   - Usar una consulta SQL como:
+     SELECT a.id AS access_id, apps.app_name, mods.module_name, subs.submodule_name
+     FROM master_klimtab_employee_access a
+     LEFT JOIN master_klimtab_apps apps ON a.app_id = apps.id
+     LEFT JOIN master_klimtab_modules mods ON a.module_id = mods.id
+     LEFT JOIN master_klimtab_submodules subs ON a.submodule_id = subs.id
+     WHERE a.employee_id = :employee_id
+   - Revisar el mapeo en el frontend para que los datos de módulo y submódulo correspondan a la app correcta.
+
+Notas:
+- Ambas soluciones requieren revisar tanto el backend (consultas y relaciones) como el frontend (estado y renderizado).
+- Si hay dudas, revisar el historial de este chat para ver ejemplos de código y explicaciones detalladas.

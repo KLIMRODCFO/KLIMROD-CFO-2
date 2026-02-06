@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../../UserContext";
 import { supabase } from "../../../../lib/supabaseClient";
 
@@ -9,6 +9,8 @@ import { supabase } from "../../../../lib/supabaseClient";
 export default function KlimtabSecurityCenter() {
     // ...existing code...
     // Function to fetch all data (for reuse)
+    const isEditing = useRef(false);
+    const lastPwds = useRef<{ [key: string]: string }>({});
     const fetchAll = async () => {
       setLoading(true);
       const [
@@ -40,12 +42,21 @@ export default function KlimtabSecurityCenter() {
         });
         setEmployees(employeesWithBU);
         setBuList(buData);
-        const pwds: { [key: string]: string } = {};
-        employeesWithBU.forEach((emp) => {
-          const key = `${emp.email}__${emp.business_unit_id}`;
-          pwds[key] = emp.password_hash || "";
-        });
-        setPasswords(pwds);
+        // Solo actualizar passwords si no está editando y si los datos realmente cambiaron
+        if (!isEditing.current) {
+          const pwds: { [key: string]: string } = {};
+          employeesWithBU.forEach((emp) => {
+            const key = `${emp.email}__${emp.business_unit_id}`;
+            pwds[key] = emp.password_hash || "";
+          });
+          // Solo setear si hay diferencia real
+          const prev = lastPwds.current;
+          const changed = Object.keys(pwds).some(k => pwds[k] !== prev[k]);
+          if (changed) {
+            setPasswords(pwds);
+            lastPwds.current = pwds;
+          }
+        }
       }
       setLoading(false);
     };
@@ -56,6 +67,8 @@ export default function KlimtabSecurityCenter() {
   const [buList, setBuList] = useState<any[]>([]);
   // Show/hide password per row (key: email + buId)
   const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
+  // Edit mode per row
+  const [isEditingRow, setIsEditingRow] = useState<{ [key: string]: boolean }>({});
   // Notification state for in-app messages
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   // Get current user from context
@@ -98,8 +111,8 @@ export default function KlimtabSecurityCenter() {
   // Filters
   const filtered = employeesFlat.filter((emp: any) => {
     const buMatch = !filters.bu || String(emp.buId) === String(filters.bu);
-    const nameMatch = !filters.name || emp.name.toLowerCase().includes(filters.name.toLowerCase());
-    const emailMatch = !filters.email || emp.email.toLowerCase().includes(filters.email.toLowerCase());
+    const nameMatch = !filters.name || (emp.name || "").toLowerCase().includes(filters.name.toLowerCase());
+    const emailMatch = !filters.email || (emp.email || "").toLowerCase().includes(filters.email.toLowerCase());
     return buMatch && nameMatch && emailMatch;
   });
 
@@ -119,7 +132,9 @@ export default function KlimtabSecurityCenter() {
 
   // Edit password (sync for all BU with same email)
   // Cambiar el password para todos los BUs de un email
+  const editTimeout = useRef<NodeJS.Timeout | null>(null);
   const handlePasswordChange = (key: string, value: string) => {
+    isEditing.current = true;
     const [email] = key.split("__");
     setPasswords((prev) => {
       const updated = { ...prev };
@@ -130,6 +145,10 @@ export default function KlimtabSecurityCenter() {
       });
       return updated;
     });
+    if (editTimeout.current) clearTimeout(editTimeout.current);
+    editTimeout.current = setTimeout(() => {
+      isEditing.current = false;
+    }, 2000);
   };
   // Toggle show/hide password per row
   const handleToggleShowPassword = (key: string) => {
@@ -243,9 +262,15 @@ export default function KlimtabSecurityCenter() {
                     <td className="px-2 py-1 flex items-center gap-2">
                       <input
                         type={showPassword[key] ? "text" : "password"}
-                        className="border rounded px-2 py-1 w-32"
+                        className={`border rounded px-2 py-1 w-32 ${isEditingRow[key] ? '' : 'bg-gray-100 cursor-not-allowed'}`}
                         value={passwords[key] || ""}
-                        onChange={e => handlePasswordChange(key, e.target.value)}
+                        onChange={e => isEditingRow[key] && handlePasswordChange(key, e.target.value)}
+                        disabled={!isEditingRow[key]}
+                        ref={el => {
+                          if (el && isEditingRow[key]) {
+                            el.focus();
+                          }
+                        }}
                       />
                       <button
                         type="button"
@@ -253,6 +278,16 @@ export default function KlimtabSecurityCenter() {
                         onClick={() => handleToggleShowPassword(key)}
                       >
                         {showPassword[key] ? "Hide" : "Show"}
+                      </button>
+                      <button
+                        type="button"
+                        className={`text-xs px-2 py-1 border rounded ${isEditingRow[key] ? 'bg-blue-200' : 'bg-blue-100'} hover:bg-blue-300`}
+                        onClick={() => setIsEditingRow(prev => {
+                          const next = { ...prev, [key]: !prev[key] };
+                          return next;
+                        })}
+                      >
+                        {isEditingRow[key] ? 'Cancel' : 'Edit'}
                       </button>
                     </td>
                     <td className="px-2 py-1">
