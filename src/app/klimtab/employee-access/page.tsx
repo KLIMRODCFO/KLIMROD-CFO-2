@@ -150,8 +150,11 @@ export default function EmployeeAccessPage() {
       .from("master_klimtab_employee_access")
       .delete()
       .match({ employee_id: emp.id, app_id: edit.app, module_id: edit.module });
-    // Insertar nuevos accesos
-    const rows = (edit.submodules.length > 0 ? edit.submodules : [null]).map(submoduleId => ({
+    // Filtrar submódulos válidos para el módulo seleccionado
+    const validSubmodules = submodules.filter(s => String(s.module_id) === String(edit.module)).map(s => String(s.id));
+    const filteredSubmodules = (edit.submodules || []).filter(subId => validSubmodules.includes(String(subId)));
+    // Insertar nuevos accesos solo con submódulos válidos
+    const rows = (filteredSubmodules.length > 0 ? filteredSubmodules : [null]).map(submoduleId => ({
       employee_id: emp.id,
       app_id: edit.app,
       module_id: edit.module,
@@ -253,29 +256,36 @@ export default function EmployeeAccessPage() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {(accessRecords[emp.id] || []).map(rec => {
-                                    const app = apps.find(a => String(a.id) === String(rec.app_id));
-                                    const module = modules.find(m => String(m.id) === String(rec.module_id));
-                                    const submodule = submodules.find(s => String(s.id) === String(rec.submodule_id));
-                                    return (
-                                      <tr key={rec.app_id + '-' + rec.module_id + '-' + rec.submodule_id} className="border-b">
-                                        <td className="px-2 py-1 text-left">{app?.app_name || rec.app_id}</td>
-                                        <td className="px-2 py-1 text-left">{module?.module_name || rec.module_id}</td>
-                                        <td className="px-2 py-1 text-left">{submodule?.submodule_name || ''}</td>
-                                        <td className="px-2 py-1 text-left">
-                                          <button
-                                            className="text-xs px-2 py-1 border rounded bg-red-100 text-red-700 hover:bg-red-200"
-                                            onClick={() => {
-                                              setAccessToDelete(rec);
-                                              setShowDeleteModal(true);
-                                            }}
-                                          >
-                                            Delete
-                                          </button>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
+                                  {(accessRecords[emp.id] || [])
+                                    .filter(rec => {
+                                      // Solo mostrar submódulos válidos para el módulo
+                                      if (!rec.submodule_id) return true;
+                                      const sub = submodules.find(s => String(s.id) === String(rec.submodule_id));
+                                      return sub && String(sub.module_id) === String(rec.module_id);
+                                    })
+                                    .map(rec => {
+                                      const app = apps.find(a => String(a.id) === String(rec.app_id));
+                                      const module = modules.find(m => String(m.id) === String(rec.module_id));
+                                      const submodule = submodules.find(s => String(s.id) === String(rec.submodule_id));
+                                      return (
+                                        <tr key={rec.app_id + '-' + rec.module_id + '-' + rec.submodule_id} className="border-b">
+                                          <td className="px-2 py-1 text-left">{app?.app_name || rec.app_id}</td>
+                                          <td className="px-2 py-1 text-left">{module?.module_name || rec.module_id}</td>
+                                          <td className="px-2 py-1 text-left">{submodule?.submodule_name || ''}</td>
+                                          <td className="px-2 py-1 text-left">
+                                            <button
+                                              className="text-xs px-2 py-1 border rounded bg-red-100 text-red-700 hover:bg-red-200"
+                                              onClick={() => {
+                                                setAccessToDelete(rec);
+                                                setShowDeleteModal(true);
+                                              }}
+                                            >
+                                              Delete
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
                                 </tbody>
                               </table>
                             </div>
