@@ -160,10 +160,30 @@ export default function KlimtabSecurityCenter() {
   const handleSaveRow = async (emp: any) => {
     setLoading(true);
     const [email] = (emp.email || "").split();
-    // Find all BUs for this email (across all employees, not just filtered/visible)
-    const allEmpWithEmail = employeesFlat.filter(e => e.email === email);
     const password = passwords[`${email}__${emp.buId}`] || "";
-    if (password) {
+
+    if (!password) {
+      setNotification({ type: 'error', message: "Password cannot be empty" });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // 1. Sync with Supabase Auth via API
+      const response = await fetch('/api/manage-employee-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const apiData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(apiData.error || 'Failed to sync with Auth');
+      }
+
+      // 2. Find all BUs for this email (across all employees, not just filtered/visible)
+      const allEmpWithEmail = employeesFlat.filter(e => e.email === email);
+      
       // Actualiza todas las BUs para este email
       const results = await Promise.all(
         allEmpWithEmail.map(e =>
@@ -174,24 +194,28 @@ export default function KlimtabSecurityCenter() {
               email: e.email,
               password_hash: password,
               created_by: user?.id ?? null,
+              platform_id: 1,
             },
-            { onConflict: "employee_id" }
+            { onConflict: "employee_id,business_unit_id" }
           )
         )
       );
       const error = results.find(r => r.error);
       if (error) {
-        setNotification({ type: 'error', message: "Error saving password: " + (error.error?.message || "Unknown error") });
+        setNotification({ type: 'error', message: "Error saving password locally: " + (error.error?.message || "Unknown error") });
       } else {
         // Check if this was a creation or update (if previous password_hash was empty)
         const wasCreated = allEmpWithEmail.some(e => !("password_hash" in e) || !e.password_hash);
         setNotification({
           type: 'success',
-          message: wasCreated ? 'Password successfully created.' : 'Password successfully changed.'
+          message: wasCreated ? 'Auth User & Password successfully updated.' : 'Auth User & Password successfully updated.'
         });
       }
+    } catch (err: any) {
+      setNotification({ type: 'error', message: "Auth Error: " + err.message });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -296,13 +320,23 @@ export default function KlimtabSecurityCenter() {
                       </span>
                     </td>
                     <td className="px-2 py-1">
-                      <button
-                        className="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold"
-                        onClick={() => handleSaveRow(emp)}
-                        disabled={loading}
-                      >
-                        Save changes
-                      </button>
+                      {emp.password_hash ? (
+                        <button
+                          className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold"
+                          onClick={() => handleSaveRow(emp)}
+                          disabled={loading}
+                        >
+                          SAVE CHANGES
+                        </button>
+                      ) : (
+                        <button
+                          className="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold"
+                          onClick={() => handleSaveRow(emp)}
+                          disabled={loading}
+                        >
+                          GRANT ACCESS
+                        </button>
+                      )}
                     </td>
                   </tr>
                   {isMultiBU && otherBUs.length > 0 && (
