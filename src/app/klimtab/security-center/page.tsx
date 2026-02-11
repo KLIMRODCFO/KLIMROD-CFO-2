@@ -320,7 +320,19 @@ export default function KlimtabSecurityCenter() {
                       </span>
                     </td>
                     <td className="px-2 py-1">
-                      {emp.password_hash ? (
+                      {emp.password_hash && isEditingRow[key] && (
+                        <button
+                          className="bg-yellow-500 text-white px-3 py-1 rounded text-xs font-bold"
+                          onClick={() => {
+                            setIsEditingRow(prev => ({ ...prev, [key]: false }));
+                            handleSaveRow(emp);
+                          }}
+                          disabled={loading}
+                        >
+                          SAVE PASSWORD
+                        </button>
+                      )}
+                      {!isEditingRow[key] && emp.password_hash && (
                         <button
                           className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold"
                           onClick={() => handleSaveRow(emp)}
@@ -328,7 +340,8 @@ export default function KlimtabSecurityCenter() {
                         >
                           SAVE CHANGES
                         </button>
-                      ) : (
+                      )}
+                      {!emp.password_hash && (
                         <button
                           className="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold"
                           onClick={() => handleSaveRow(emp)}
